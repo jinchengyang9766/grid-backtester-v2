@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Uploaded files and generated reports (never persisted, see docs/BLUEPRINT.md 3.2/13)
+/uploads/
+/generated_reports/
+backend/uploads/
+backend/generated_reports/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
