@@ -1,0 +1,48 @@
+"""Pure backtest-engine layer: baseline, zone boundaries, and grid generation."""
+
+from app.engine.grid import (
+    MAX_GRID_LEVELS,
+    EmptyDatasetError,
+    GridCollapsesAfterTickRoundingError,
+    GridTooDenseError,
+    InvalidZoneConfigError,
+    NonPositiveBaselineError,
+    NonPositiveDistanceError,
+    NonPositiveGridStepError,
+    NonPositiveTickSizeError,
+    build_grid_setup,
+    build_zone_boundaries,
+    canonical_grid_levels,
+    classify_zone,
+    generate_raw_grid_levels,
+    resolve_absolute_value,
+    resolve_baseline,
+    resolve_grid_step,
+    round_to_tick,
+)
+from app.engine.grid_models import GridSetup, TickSizeConfig, ValueConfig, ZoneBoundaries
+
+__all__ = [
+    "EmptyDatasetError",
+    "GridCollapsesAfterTickRoundingError",
+    "GridSetup",
+    "GridTooDenseError",
+    "InvalidZoneConfigError",
+    "MAX_GRID_LEVELS",
+    "NonPositiveBaselineError",
+    "NonPositiveDistanceError",
+    "NonPositiveGridStepError",
+    "NonPositiveTickSizeError",
+    "TickSizeConfig",
+    "ValueConfig",
+    "ZoneBoundaries",
+    "build_grid_setup",
+    "build_zone_boundaries",
+    "canonical_grid_levels",
+    "classify_zone",
+    "generate_raw_grid_levels",
+    "resolve_absolute_value",
+    "resolve_baseline",
+    "resolve_grid_step",
+    "round_to_tick",
+]
