@@ -1,5 +1,13 @@
-"""Pure backtest-engine layer: baseline, zones, grids, and price paths."""
+"""Pure backtest-engine layer: baseline, zones, grids, paths, and crossings."""
 
+from app.engine.crossing import (
+    boundary_kind,
+    determine_segment_direction,
+    eligible_grid_levels,
+    is_strictly_between,
+    plan_grid_crossings,
+    transition_rule,
+)
 from app.engine.grid import (
     MAX_GRID_LEVELS,
     EmptyDatasetError,
@@ -32,8 +40,23 @@ from app.engine.path import (
     select_ohlc_midpoints,
 )
 from app.engine.path_models import InitialPathState, PathSegment
+from app.engine.segment import (
+    InvalidZoneTransitionError,
+    apply_boundary_transition,
+    create_traversal_state,
+    plan_segment_actions,
+)
+from app.engine.segment_models import (
+    BoundaryKind,
+    PlannedGridCrossing,
+    SegmentDirection,
+    SegmentTraversalState,
+    TransitionRule,
+    ZoneEvent,
+)
 
 __all__ = [
+    "BoundaryKind",
     "EmptyDatasetError",
     "GridCollapsesAfterTickRoundingError",
     "GridSetup",
@@ -41,6 +64,7 @@ __all__ = [
     "InitialPathState",
     "InvalidOhlcvBarError",
     "InvalidZoneConfigError",
+    "InvalidZoneTransitionError",
     "MAX_GRID_LEVELS",
     "NonPositiveBaselineError",
     "NonPositiveDistanceError",
@@ -48,9 +72,16 @@ __all__ = [
     "NonPositiveTickSizeError",
     "OhlcPathModeRequiredError",
     "PathSegment",
+    "PlannedGridCrossing",
+    "SegmentDirection",
+    "SegmentTraversalState",
     "TickSizeConfig",
+    "TransitionRule",
     "ValueConfig",
     "ZoneBoundaries",
+    "ZoneEvent",
+    "apply_boundary_transition",
+    "boundary_kind",
     "build_close_only_path",
     "build_grid_setup",
     "build_ohlcv_path",
@@ -59,11 +90,18 @@ __all__ = [
     "build_zone_boundaries",
     "canonical_grid_levels",
     "classify_zone",
+    "create_traversal_state",
+    "determine_segment_direction",
+    "eligible_grid_levels",
     "generate_raw_grid_levels",
     "initialize_path_state",
+    "is_strictly_between",
+    "plan_grid_crossings",
+    "plan_segment_actions",
     "resolve_absolute_value",
     "resolve_baseline",
     "resolve_grid_step",
     "round_to_tick",
     "select_ohlc_midpoints",
+    "transition_rule",
 ]
