@@ -84,6 +84,7 @@ BLUEPRINT.md deliberately left some mechanics as "recommended defaults" or asked
 | ED-23 | Internal Decimal context precision 28 significant digits; DB columns `NUMERIC(20,8)` | [9.1](#91-decimal-precision) |
 | ED-24 | Zone state enum: `IN_A`, `IN_C`, `OUTSIDE_C` | [10.3](#103-zone-state) |
 | ED-25 | Commission component disable semantics (each of rate/minimum/fixed toggles independently; disabled = contributes 0) | [19.1](#191-commission-formula) |
+| ED-26 | Frozen raw input-date contract (from the authoritative 159825 sample): trim, exact zero-padded `YYYY/MM/DD` only, `strptime` validation, applied identically to TongdaXin and CSV | [5.1](#51-cleaning-pipeline-order) |
 
 These decisions are technical fill-ins, not scope or trading-rule changes. Items with real product-judgment risk were asked of the user before writing this document (see the grid-step decision above); no other blocking ambiguities were found.
 
@@ -249,13 +250,20 @@ If a title line exists above the header (per 3.2 step 1) and matches the pattern
 
 1. Parse candidate rows (per format-specific rules above).
 2. Apply column mapping → produce candidate `(date_raw, open_raw, high_raw, low_raw, close_raw, volume_raw)` tuples.
-3. Convert `date_raw` to an ISO date; convert numeric fields to `Decimal`.
+3. Convert `date_raw` to a date under the frozen raw-date contract below (ED-26); convert numeric fields to `Decimal`.
 4. Apply row-validity rules ([5.2](#52-row-validity-rules)); invalid rows are set aside as **bad rows** with a reason, not included in later steps.
 5. Sort remaining valid rows by date ascending.
 6. Detect duplicate dates among valid rows ([5.3](#53-duplicate-date-policy)).
 7. Produce the cleaning summary ([5.4](#54-cleaning-summary-shape)).
 8. Show the wizard preview (first 50 + last 50 rows, bad-row table, duplicate-row table, summary).
 9. On user confirmation, persist only the final deduplicated, sorted, valid rows as `PriceBar` records.
+
+**Frozen raw input-date contract (ED-26).** Derived in Task 5A from the authoritative 159825 TongdaXin sample and applied identically to TongdaXin input and to the CSV `时间` column:
+
+1. Trim leading and trailing whitespace from the raw value.
+2. The trimmed value must match `^\d{4}/\d{2}/\d{2}$` exactly — zero-padded `YYYY/MM/DD` and nothing else.
+3. A matching value is then validated with `datetime.strptime(value, "%Y/%m/%d")`; impossible calendar dates (e.g. `2024/02/30`) are rejected.
+4. Every other form is rejected as `UNPARSEABLE_DATE`: empty or whitespace-only values, `YYYY-MM-DD`, `YYYYMMDD`, un-padded `YYYY/M/D`, values containing a time-of-day component, day-first or month-first slash forms, and any other format. No `dateutil`, fuzzy, or locale-dependent parsing is ever used. Additional accepted formats require an explicit future specification revision.
 
 ### 5.2 Row Validity Rules
 
@@ -268,7 +276,8 @@ A row is invalid (bad row) if any of the following hold, in this check order (th
 | 3 | `NON_POSITIVE_PRICE` | Any present price field (Open/High/Low/Close) is `<= 0` |
 | 4 | `MISSING_OHLC_FIELD` | In `OHLCV` mode, Open/High/Low is blank or non-numeric (ED-5: required once the dataset is determined to be OHLCV) |
 | 5 | `INVALID_OHLC_RANGE` | (ED-5) In `OHLCV` mode: `High < Low`, or `High < Open`, or `High < Close`, or `Low > Open`, or `Low > Close` |
-| 6 | `NEGATIVE_VOLUME` | Volume is present and `< 0` |
+| 6 | `INVALID_VOLUME` | Volume is mapped and nonblank but cannot be parsed under the strict numeric contract (commas, currency symbols, scientific notation, `NaN`, `Infinity`, etc.) |
+| 7 | `NEGATIVE_VOLUME` | Volume parses and is `< 0` |
 
 Rule 4/5 (ED-5) are added because the engine's OHLC path processing assumes internally consistent bars; BLUEPRINT.md does not name this check explicitly, but its own principle #4 ("No hidden assumptions") requires it — an inconsistent bar would silently corrupt path segmentation.
 
@@ -285,7 +294,7 @@ Applied to already-valid, already-sorted rows.
 
 ```json
 {
-  "total_rows_parsed": 500,
+  "total_rows_parsed": 495,
   "valid_rows": 480,
   "bad_rows": 15,
   "duplicate_dates": 5,
@@ -298,10 +307,13 @@ Applied to already-valid, already-sorted rows.
     "NON_POSITIVE_PRICE": 3,
     "MISSING_OHLC_FIELD": 4,
     "INVALID_OHLC_RANGE": 5,
+    "INVALID_VOLUME": 0,
     "NEGATIVE_VOLUME": 0
   }
 }
 ```
+
+`duplicate_dates` counts the number of **valid duplicate rows discarded** (one per `DUPLICATE_DATE_DISCARDED` record), not the number of distinct dates that had duplicates. `valid_rows` counts parsed rows minus bad rows, before duplicate removal. Therefore the counts always satisfy `valid_rows == total_rows_parsed - bad_rows` and `final_row_count == valid_rows - duplicate_dates`. `bad_row_reasons` always contains every reason key, including zero counts. When no valid rows remain, `date_range` is `null`.
 
 ---
 

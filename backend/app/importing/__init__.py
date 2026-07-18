@@ -1,5 +1,20 @@
-"""Header recognition, encoding detection, and raw TongdaXin/CSV text parsing."""
+"""Header recognition, encoding detection, raw parsing, and deterministic cleaning."""
 
+from app.importing.cleaning import (
+    IncompleteOhlcMappingError,
+    MissingRequiredColumnError,
+    clean_rows,
+    determine_data_mode,
+)
+from app.importing.cleaning_models import (
+    DUPLICATE_DATE_DISCARDED,
+    BadRow,
+    BadRowReason,
+    CleaningResult,
+    CleaningSummary,
+    DateRange,
+    DuplicateRow,
+)
 from app.importing.csv_parser import (
     CsvHeaderNotFoundError,
     CsvParseResult,
@@ -22,17 +37,28 @@ from app.importing.tdx import (
 )
 
 __all__ = [
+    "BadRow",
+    "BadRowReason",
+    "CleaningResult",
+    "CleaningSummary",
     "CsvHeaderNotFoundError",
     "CsvParseResult",
+    "DUPLICATE_DATE_DISCARDED",
+    "DateRange",
     "DecodedText",
+    "DuplicateRow",
     "EncodingDetectionError",
     "HeaderNotFoundError",
+    "IncompleteOhlcMappingError",
+    "MissingRequiredColumnError",
     "RawCsvRow",
     "RawTdxRow",
     "TdxParseResult",
     "auto_map_columns",
+    "clean_rows",
     "count_recognized_headers",
     "decode_tdx_bytes",
+    "determine_data_mode",
     "is_footer_line",
     "normalize_header",
     "parse_csv_text",
