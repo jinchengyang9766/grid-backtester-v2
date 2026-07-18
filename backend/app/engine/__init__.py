@@ -1,4 +1,4 @@
-"""Pure backtest-engine layer: baseline, zone boundaries, and grid generation."""
+"""Pure backtest-engine layer: baseline, zones, grids, and price paths."""
 
 from app.engine.grid import (
     MAX_GRID_LEVELS,
@@ -21,28 +21,49 @@ from app.engine.grid import (
     round_to_tick,
 )
 from app.engine.grid_models import GridSetup, TickSizeConfig, ValueConfig, ZoneBoundaries
+from app.engine.path import (
+    InvalidOhlcvBarError,
+    OhlcPathModeRequiredError,
+    build_close_only_path,
+    build_ohlcv_path,
+    build_path_segments,
+    build_price_path,
+    initialize_path_state,
+    select_ohlc_midpoints,
+)
+from app.engine.path_models import InitialPathState, PathSegment
 
 __all__ = [
     "EmptyDatasetError",
     "GridCollapsesAfterTickRoundingError",
     "GridSetup",
     "GridTooDenseError",
+    "InitialPathState",
+    "InvalidOhlcvBarError",
     "InvalidZoneConfigError",
     "MAX_GRID_LEVELS",
     "NonPositiveBaselineError",
     "NonPositiveDistanceError",
     "NonPositiveGridStepError",
     "NonPositiveTickSizeError",
+    "OhlcPathModeRequiredError",
+    "PathSegment",
     "TickSizeConfig",
     "ValueConfig",
     "ZoneBoundaries",
+    "build_close_only_path",
     "build_grid_setup",
+    "build_ohlcv_path",
+    "build_path_segments",
+    "build_price_path",
     "build_zone_boundaries",
     "canonical_grid_levels",
     "classify_zone",
     "generate_raw_grid_levels",
+    "initialize_path_state",
     "resolve_absolute_value",
     "resolve_baseline",
     "resolve_grid_step",
     "round_to_tick",
+    "select_ohlc_midpoints",
 ]
