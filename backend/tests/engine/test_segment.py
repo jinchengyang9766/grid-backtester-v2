@@ -767,8 +767,9 @@ def test_segment_modules_have_no_framework_or_portfolio_dependencies() -> None:
             assert forbidden not in source, f"{module.__name__} contains {forbidden!r}"
 
 
-def test_no_trade_model_is_introduced() -> None:
+def test_no_database_trade_model_is_introduced() -> None:
+    # Task 9 later adds the pure TradeResult value object; a persistence-style
+    # Trade entity must still never appear in the pure engine package.
     import app.engine as engine_pkg
 
     assert not hasattr(engine_pkg, "Trade")
-    assert not hasattr(engine_pkg, "TradeResult")
