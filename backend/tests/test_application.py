@@ -271,7 +271,8 @@ def test_engine_results_are_unchanged_with_infrastructure_imported() -> None:
     assert result == run_backtest(bars, config)
 
 
-def test_no_backtest_api_or_optimization_code_introduced() -> None:
+def test_no_optimization_or_export_code_introduced() -> None:
     assert not any(name.startswith("optimization") for name in Base.metadata.tables)
-    assert not (APP_DIR / "api" / "routes" / "backtests.py").exists()
+    assert not (APP_DIR / "optimization").exists()
+    assert not (APP_DIR / "api" / "routes" / "exports.py").exists()
     assert not (APP_DIR / "db" / "models.py").exists()

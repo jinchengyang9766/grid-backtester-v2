@@ -58,11 +58,38 @@ detailed implementation contract this backend is built against.
   events, trades, zone events, and equity series. Dataset deletion is now
   genuinely restricted while any `BacktestRun` references it
   (`ON DELETE RESTRICT` → the Dataset API's `409 DATASET_IN_USE`).
-- **No Backtest API exists yet.** Engine-result persistence services and
-  the `POST /api/backtests` endpoints arrive in Task 18B; no backtest can
-  be run or retrieved over HTTP yet. Exports, optimization APIs, and the
-  frontend upload wizard are also not implemented. There are no refresh
-  tokens and no password-reset or email-verification flow yet.
+- **Backtest execution: complete.** `POST /api/backtests` runs a backtest
+  **synchronously**: the owned dataset's PriceBars (ordered by date, id)
+  become pure engine Bars, the request is adapted into the frozen engine
+  configuration, `run_backtest` executes, and the entire result persists
+  in **one transaction** — the `BacktestRun` plus every `BacktestEvent`
+  (the shared ordering backbone: one row per Trade/ZoneEvent, with
+  `event_sequence` unique per run), each event's single `Trade` or
+  `ZoneEventRecord` child, one `EventEquity` per event, and one
+  `DailyEquity` per bar. Success returns `201 COMPLETED`; a supported
+  engine runtime failure (non-positive execution price) persists only a
+  `FAILED` run with a safe `error_message` and still returns 201;
+  request/configuration validation failures return 422 with the SPEC's
+  specific codes (`INVALID_ZONE_CONFIG`, `GRID_TOO_DENSE`,
+  `NEGATIVE_INITIAL_CASH`, …) and create **no** run. The response never
+  reports `PENDING`/`RUNNING`.
+  - `BacktestRun.configuration` stores canonical JSON: every Decimal as a
+    plain fixed-point string, enums as values, one deterministic slippage
+    representation (`shared` mode/value XOR separate `buy`/`sell`), no
+    float anywhere.
+  - `BacktestRun.result_metrics` stores exactly:
+    `initial_equity`, `baseline`, `a_lower`, `a_upper`, `c_lower`,
+    `c_upper`, `grid_step`, `grid_levels` (dashboard contract),
+    `metrics` (the engine `BacktestMetrics` tree: `strategy`,
+    `trade_costs`, `zones`, `first_return`, `benchmark1`, `benchmark2`,
+    `benchmark2_day_one_commission`, `benchmark2_day_one_slippage_cost`),
+    `benchmark1`/`benchmark2` (series points + day-one purchase), and
+    `final_state`. The normalized Trade/ZoneEvent/DailyEquity/EventEquity
+    series are never duplicated inside it.
+- **No Backtest history APIs yet.** List/detail/rename/delete, rerun,
+  duplicate, compare, exports, optimization APIs, and the frontend are
+  not implemented. There are no refresh tokens and no password-reset or
+  email-verification flow yet.
 
 ## Requirements
 
