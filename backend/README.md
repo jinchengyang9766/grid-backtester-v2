@@ -19,9 +19,16 @@ detailed implementation contract this backend is built against.
   declarative models) and `alembic/versions/` contains the first
   migration. Deleting a user cascades to their datasets, and deleting a
   dataset cascades to its price bars, enforced at database level.
-- **No application APIs exist yet.** Authentication, registration/login,
-  dataset upload/preview endpoints, backtest persistence, and all other
-  business endpoints are not implemented. Nothing hashes passwords yet.
+- **Authentication: complete.** `POST /api/auth/register`,
+  `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me`
+  exist. Passwords are stored as Argon2id hashes; sessions use an HS256
+  JWT delivered exclusively in an `HttpOnly` cookie (`Path=/api`,
+  `SameSite=Lax`, 24-hour default expiry). Errors use the standard
+  `{"error": {"code", "message", "details?"}}` envelope.
+- **No dataset or backtest APIs exist yet.** Dataset upload/preview/save,
+  backtest persistence endpoints, exports, and optimization APIs are not
+  implemented. There are no refresh tokens and no password-reset or
+  email-verification flow yet.
 
 ## Requirements
 
@@ -69,6 +76,26 @@ Then:
 
 Startup opens no database connection and creates no tables.
 
+## Authentication
+
+Cookie-based JWT authentication assuming the SPEC's same-origin Next.js
+`/api` proxy architecture (no browser-facing CORS, no extra CSRF token,
+no cookie `Domain` attribute):
+
+- The access token is an HS256 JWT (`sub`/`iat`/`exp` only) signed with
+  `GRID_BACKTESTER_AUTH_SECRET_KEY`. The in-code default secret is a
+  labeled development-only value and is **not** production-safe —
+  production must set a long random secret via the environment.
+- The token lives only in an `HttpOnly` cookie (`Path=/api`,
+  `SameSite=Lax`, `Max-Age` = `GRID_BACKTESTER_ACCESS_TOKEN_EXPIRE_MINUTES`
+  × 60, default 24 hours). The cookie is not `Secure` in local development
+  only because localhost uses plain HTTP; in production
+  (`GRID_BACKTESTER_APP_ENVIRONMENT=production`) it is `Secure`.
+- No refresh tokens: when the token expires, the user logs in again.
+- Passwords are hashed with Argon2id (library-recommended parameters);
+  plaintext is never stored or logged. The only password rule is the
+  frozen minimum of 8 characters.
+
 ## Database migrations (Alembic)
 
 Alembic is configured in `alembic.ini` and `alembic/`, and owns all schema
@@ -93,7 +120,8 @@ or running the API never emits DDL. The single revision so far creates
 ```text
 backend/
 ├── app/
-│   ├── api/            # FastAPI routers (health only, for now)
+│   ├── api/            # FastAPI routers, schemas, error envelope
+│   ├── auth/           # Argon2id hashing, JWTs, current-user dependency
 │   ├── core/           # Typed application settings
 │   ├── db/             # SQLAlchemy base, engine/session, persistence models
 │   ├── domain/         # Pure domain models and enums

@@ -261,9 +261,8 @@ def test_engine_results_are_unchanged_with_infrastructure_imported() -> None:
     assert result == run_backtest(bars, config)
 
 
-def test_no_business_models_auth_or_upload_code_introduced() -> None:
+def test_no_business_models_or_upload_code_introduced() -> None:
     assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
-    assert not (APP_DIR / "auth").exists()
     assert not (APP_DIR / "api" / "routes" / "datasets.py").exists()
     assert not (APP_DIR / "api" / "routes" / "backtests.py").exists()
     assert not (APP_DIR / "db" / "models.py").exists()
