@@ -1,5 +1,11 @@
 """Pure backtest-engine layer: baseline, zones, grids, paths, and crossings."""
 
+from app.engine.backtest import run_backtest
+from app.engine.backtest_models import (
+    BacktestConfig,
+    BacktestResult,
+    FinalBacktestState,
+)
 from app.engine.benchmark_models import (
     BenchmarkDayOnePurchase,
     BenchmarkEquityPoint,
@@ -127,7 +133,9 @@ from app.engine.segment_models import (
 )
 
 __all__ = [
+    "BacktestConfig",
     "BacktestMetrics",
+    "BacktestResult",
     "BenchmarkDayOnePurchase",
     "BenchmarkEquityPoint",
     "BenchmarkSeries",
@@ -139,6 +147,7 @@ __all__ = [
     "EquitySeriesMetrics",
     "EventEquityPoint",
     "ExecutionConfig",
+    "FinalBacktestState",
     "FirstReturnMetrics",
     "GridCollapsesAfterTickRoundingError",
     "GridSetup",
@@ -224,6 +233,7 @@ __all__ = [
     "resolve_baseline",
     "resolve_grid_step",
     "round_to_tick",
+    "run_backtest",
     "select_benchmark2_reference_price",
     "select_ohlc_midpoints",
     "transition_rule",

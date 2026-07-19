@@ -691,10 +691,9 @@ def test_equity_and_metric_modules_have_no_forbidden_dependencies() -> None:
             assert forbidden not in source, f"{module.__name__} contains {forbidden!r}"
 
 
-def test_no_backtest_loop_or_database_event_model_introduced() -> None:
+def test_no_database_event_model_or_loop_in_metric_modules() -> None:
     import app.engine as engine_pkg
 
-    assert not hasattr(engine_pkg, "run_backtest")
     assert not hasattr(engine_pkg, "BacktestEvent")
     for module_name in ("app.engine.equity", "app.engine.metrics"):
         module = __import__(module_name, fromlist=["_"])

@@ -604,9 +604,8 @@ def test_benchmark_modules_have_no_forbidden_dependencies() -> None:
             assert forbidden not in source, f"{module.__name__} contains {forbidden!r}"
 
 
-def test_no_equity_row_models_or_backtest_loop_introduced() -> None:
+def test_no_database_style_equity_row_models_introduced() -> None:
     import app.engine as engine_pkg
 
     assert not hasattr(engine_pkg, "EventEquity")
     assert not hasattr(engine_pkg, "DailyEquity")
-    assert not hasattr(engine_pkg, "run_backtest")
