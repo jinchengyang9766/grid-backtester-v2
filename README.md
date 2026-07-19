@@ -37,12 +37,18 @@ grid-backtester-v2/
 
 ## Current implementation status
 
-Monorepo and backend development-environment foundation only:
-
-- `backend/` has a Python 3.12 project (`pyproject.toml`) with pytest,
-  pytest-cov, Ruff, and mypy configured, and one environment test.
-- No parsing, cleaning, grid generation, trading logic, API routes,
-  database models, authentication, or frontend code has been written yet.
+- **Pure backtest engine: complete.** Parsing/cleaning of TongdaXin and
+  CSV data, grid/zone generation, deterministic price paths, crossing
+  planning, order execution, equity capture, two buy-and-hold benchmarks,
+  metrics, and the full `run_backtest` orchestration are implemented and
+  tested in `backend/app/` as framework-free Python.
+- **Backend application: infrastructure only.** A FastAPI application with
+  typed settings, SQLAlchemy 2.x session infrastructure, Alembic
+  scaffolding, and a `GET /health` endpoint exists. No application
+  database schema has been created yet.
+- **Not yet implemented:** users/authentication, dataset upload APIs,
+  backtest persistence and business endpoints, exports, optimization,
+  frontend, Celery/Redis, and Docker.
 
 See `docs/SPEC.md` Section 40 for the full implementation phase order.
 

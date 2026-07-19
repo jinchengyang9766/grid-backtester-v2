@@ -22,6 +22,9 @@ venv/
 .env.*
 !.env.example
 
+# Local development databases (BLUEPRINT.md 23: never commit local database files)
+backend/*.db
+
 # Node / Next.js
 node_modules/
 .next/
