@@ -7,7 +7,7 @@ owner user ID, raw file content, or cache expiry internals.
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Self
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -16,9 +16,12 @@ from app.domain.models import Bar
 from app.importing import BadRow, CleaningSummary, DuplicateRow
 
 __all__ = [
+    "DatasetDetailResponse",
+    "DatasetListResponse",
     "DatasetPreviewResponse",
     "DatasetSaveRequest",
     "DatasetSavedResponse",
+    "DatasetSummaryModel",
 ]
 
 _PREVIEW_HEAD_TAIL = 50
@@ -186,3 +189,37 @@ class DatasetSavedResponse(BaseModel):
     @classmethod
     def _ensure_timezone_aware(cls, value: datetime) -> datetime:
         return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+class DatasetSummaryModel(BaseModel):
+    """Dataset list item: metadata only — never user_id, mappings, or bars."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    source_type: str
+    original_filename: str
+    security_name: str | None
+    security_code: str | None
+    data_mode: str
+    start_date: date
+    end_date: date
+    row_count: int
+    created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def _ensure_timezone_aware(cls, value: datetime) -> datetime:
+        return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+class DatasetListResponse(BaseModel):
+    items: list[DatasetSummaryModel]
+
+
+class DatasetDetailResponse(DatasetSummaryModel):
+    """Summary fields plus the structured JSON columns; still no PriceBars."""
+
+    column_mapping: dict[str, Any]
+    cleaning_summary: dict[str, Any]

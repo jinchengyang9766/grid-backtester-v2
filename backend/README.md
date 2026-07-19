@@ -37,10 +37,20 @@ detailed implementation contract this backend is built against.
   The preview cache is in-process (per application instance) and intended
   for local single-worker use; a Redis-backed shared cache is deferred to
   the background-job stage.
-- **No other business APIs exist yet.** Dataset list/detail/delete,
-  backtest persistence endpoints, exports, and optimization APIs are not
-  implemented, and the frontend upload wizard does not exist. There are no
-  refresh tokens and no password-reset or email-verification flow yet.
+- **Dataset management: complete.** `GET /api/datasets` lists the current
+  user's datasets (newest first), `GET /api/datasets/{dataset_id}` returns
+  full metadata including `column_mapping` and `cleaning_summary`, and
+  `DELETE /api/datasets/{dataset_id}` removes a dataset with its
+  `PriceBar` rows via the database `ON DELETE CASCADE`. All dataset access
+  is ownership-scoped: a missing dataset and another user's dataset both
+  return the identical `404 DATASET_NOT_FOUND`. `409 DATASET_IN_USE` is
+  reserved for deletion blocked by restricted dependent resources
+  (future `BacktestRun`/`OptimizationJob` references). Dataset rename,
+  search, and pagination are not implemented.
+- **No other business APIs exist yet.** Backtest persistence endpoints,
+  exports, and optimization APIs are not implemented, and the frontend
+  upload wizard does not exist. There are no refresh tokens and no
+  password-reset or email-verification flow yet.
 
 ## Requirements
 
