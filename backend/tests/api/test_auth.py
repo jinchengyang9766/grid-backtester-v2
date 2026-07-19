@@ -417,14 +417,20 @@ class TestDatabaseSafety:
         login(client)
         client.get("/api/auth/me")
         client.post("/api/auth/logout")
-        assert set(sa.inspect(db_engine).get_table_names()) == {
+        assert set(sa.inspect(db_engine).get_table_names()) == set(Base.metadata.tables)
+
+    def test_metadata_contains_exactly_the_application_tables(self) -> None:
+        assert set(Base.metadata.tables) == {
             "users",
             "datasets",
             "price_bars",
+            "backtest_runs",
+            "backtest_events",
+            "trades",
+            "zone_events",
+            "daily_equity",
+            "event_equity",
         }
-
-    def test_metadata_still_contains_exactly_three_tables(self) -> None:
-        assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
 
     def test_no_default_dev_database_created_by_auth_imports(self, tmp_path: Path) -> None:
         # Engine creation stays lazy: no file appears without a connection.

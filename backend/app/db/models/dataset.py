@@ -24,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.db.models.backtest_run import BacktestRun
     from app.db.models.price_bar import PriceBar
     from app.db.models.user import User
 
@@ -68,4 +69,9 @@ class Dataset(Base):
     user: Mapped[User] = relationship(back_populates="datasets")
     price_bars: Mapped[list[PriceBar]] = relationship(
         back_populates="dataset", cascade="all, delete-orphan", passive_deletes=True
+    )
+    # No delete cascade here: backtest_runs.dataset_id is ON DELETE RESTRICT,
+    # so the database itself rejects deleting a Dataset that runs reference.
+    backtest_runs: Mapped[list[BacktestRun]] = relationship(
+        back_populates="dataset", passive_deletes=True
     )

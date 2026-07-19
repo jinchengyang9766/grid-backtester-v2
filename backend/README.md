@@ -47,10 +47,22 @@ detailed implementation contract this backend is built against.
   reserved for deletion blocked by restricted dependent resources
   (future `BacktestRun`/`OptimizationJob` references). Dataset rename,
   search, and pagination are not implemented.
-- **No other business APIs exist yet.** Backtest persistence endpoints,
-  exports, and optimization APIs are not implemented, and the frontend
-  upload wizard does not exist. There are no refresh tokens and no
-  password-reset or email-verification flow yet.
+- **Backtest persistence schema: exists.** The second migration adds six
+  tables: `backtest_runs`, `backtest_events`, `trades`, `zone_events`,
+  `daily_equity`, and `event_equity`. `backtest_events` is the single
+  global event-ordering backbone — every Trade and ZoneEvent (and its
+  EventEquity row) references exactly one event row, and
+  `UNIQUE (backtest_run_id, event_sequence)` enforces one chronological
+  order across all event kinds at database level. Deleting a User cascades
+  through runs to every result row; deleting a BacktestRun cascades to its
+  events, trades, zone events, and equity series. Dataset deletion is now
+  genuinely restricted while any `BacktestRun` references it
+  (`ON DELETE RESTRICT` → the Dataset API's `409 DATASET_IN_USE`).
+- **No Backtest API exists yet.** Engine-result persistence services and
+  the `POST /api/backtests` endpoints arrive in Task 18B; no backtest can
+  be run or retrieved over HTTP yet. Exports, optimization APIs, and the
+  frontend upload wizard are also not implemented. There are no refresh
+  tokens and no password-reset or email-verification flow yet.
 
 ## Requirements
 
@@ -134,8 +146,11 @@ alembic current
 ```
 
 Alembic — not application startup — creates and drops tables; importing
-or running the API never emits DDL. The single revision so far creates
-`users`, `datasets`, and `price_bars`.
+or running the API never emits DDL. Two revisions exist:
+`b7a1d2c3e4f5` creates `users`/`datasets`/`price_bars`, and
+`c8d2e4f6a1b7` creates the six backtest persistence tables.
+`alembic downgrade b7a1d2c3e4f5` reverts just the backtest tables;
+`alembic upgrade head` re-creates them.
 
 ## Project layout
 

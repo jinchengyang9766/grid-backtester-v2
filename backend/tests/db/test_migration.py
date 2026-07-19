@@ -15,7 +15,17 @@ from sqlalchemy.exc import IntegrityError
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
-APPLICATION_TABLES = {"users", "datasets", "price_bars"}
+APPLICATION_TABLES = {
+    "users",
+    "datasets",
+    "price_bars",
+    "backtest_runs",
+    "backtest_events",
+    "trades",
+    "zone_events",
+    "daily_equity",
+    "event_equity",
+}
 
 
 def _alembic_config(database_url: str) -> Config:
@@ -161,12 +171,13 @@ class TestDowngrade:
 
 
 class TestRevisionChain:
-    def test_exactly_one_revision_exists(self, tmp_path: Path) -> None:
+    def test_revision_chain_is_linear_with_two_revisions(self, tmp_path: Path) -> None:
         config = _alembic_config(f"sqlite:///{tmp_path / 'chain.db'}")
         script = ScriptDirectory.from_config(config)
-        revisions = list(script.walk_revisions())
-        assert len(revisions) == 1
-        assert revisions[0].doc.splitlines()[0] == "create users datasets and price bars"
+        revisions = list(script.walk_revisions())  # newest first
+        assert len(revisions) == 2
+        assert revisions[0].doc.splitlines()[0] == "create backtest result persistence tables"
+        assert revisions[1].doc.splitlines()[0] == "create users datasets and price bars"
 
     def test_target_metadata_contains_all_model_tables(self) -> None:
         import app.db.models  # noqa: F401

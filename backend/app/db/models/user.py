@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.db.models.backtest_run import BacktestRun
     from app.db.models.dataset import Dataset
 
 __all__ = ["User"]
@@ -38,6 +39,9 @@ class User(Base):
     )
 
     datasets: Mapped[list[Dataset]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    backtest_runs: Mapped[list[BacktestRun]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
 

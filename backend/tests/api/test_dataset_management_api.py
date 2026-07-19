@@ -358,7 +358,7 @@ class TestArchitecture:
 
         from app.db import Base
 
-        assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
+        assert {"users", "datasets", "price_bars"} <= set(Base.metadata.tables)
         management_source = (
             Path(__file__).resolve().parents[2] / "app" / "datasets" / "management.py"
         ).read_text(encoding="utf-8")

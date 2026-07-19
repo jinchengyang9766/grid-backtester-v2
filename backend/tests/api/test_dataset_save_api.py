@@ -277,8 +277,6 @@ class TestFullFlow:
 
         assert save(client, token).status_code == 404
         assert set(tmp_path.rglob("*")) == before_files  # no uploaded file on disk
-        assert set(sa.inspect(db_engine).get_table_names()) == {
-            "users",
-            "datasets",
-            "price_bars",
-        }
+        from app.db import Base
+
+        assert set(sa.inspect(db_engine).get_table_names()) == set(Base.metadata.tables)

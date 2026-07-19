@@ -131,9 +131,19 @@ def test_app_modules_never_run_the_backtest_engine() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_base_is_declarative_with_only_first_slice_tables() -> None:
+def test_base_is_declarative_with_exactly_the_application_tables() -> None:
     assert issubclass(Base, DeclarativeBase)
-    assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
+    assert set(Base.metadata.tables) == {
+        "users",
+        "datasets",
+        "price_bars",
+        "backtest_runs",
+        "backtest_events",
+        "trades",
+        "zone_events",
+        "daily_equity",
+        "event_equity",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +271,7 @@ def test_engine_results_are_unchanged_with_infrastructure_imported() -> None:
     assert result == run_backtest(bars, config)
 
 
-def test_no_backtest_persistence_or_business_model_code_introduced() -> None:
-    assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
+def test_no_backtest_api_or_optimization_code_introduced() -> None:
+    assert not any(name.startswith("optimization") for name in Base.metadata.tables)
     assert not (APP_DIR / "api" / "routes" / "backtests.py").exists()
     assert not (APP_DIR / "db" / "models.py").exists()

@@ -87,20 +87,11 @@ def make_price_bar(
 
 
 class TestModelRegistration:
-    def test_metadata_contains_exactly_the_three_tables(self) -> None:
-        assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
+    def test_metadata_contains_the_first_slice_tables(self) -> None:
+        assert {"users", "datasets", "price_bars"} <= set(Base.metadata.tables)
 
-    def test_no_future_tables_are_registered(self) -> None:
-        forbidden = {
-            "backtest_runs",
-            "backtest_events",
-            "trades",
-            "zone_events",
-            "daily_equity",
-            "event_equity",
-            "optimization_jobs",
-            "optimization_results",
-        }
+    def test_no_optimization_tables_are_registered(self) -> None:
+        forbidden = {"optimization_jobs", "optimization_results"}
         assert forbidden.isdisjoint(set(Base.metadata.tables))
 
     def test_public_imports_work(self) -> None:
