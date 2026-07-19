@@ -1212,12 +1212,12 @@ Once past the denominator guard above, `DailyEquity[i].equity` (the numerator, f
 (ED-8) Computed from Daily Close Equity:
 
 ```text
-running_peak[t] = max(equity[0..t])
+running_peak[t] = max(Initial Equity, equity[0..t])   # seeded with Initial Equity (17.1)
 drawdown[t] = equity[t] / running_peak[t] - 1        # always <= 0
 Maximum Drawdown = min(drawdown[0..T])                # most negative value, stored as a non-positive Decimal
 ```
 
-The division by `running_peak[t]` never divides by zero: `running_peak[t] = max(equity[0..t]) >= equity[0] = Initial Equity > 0` for every `t`, since `Initial Equity > 0` is enforced at request-validation time ([21.1](#211-basic-metrics), `ZERO_INITIAL_EQUITY`) and `running_peak` is a running maximum that can only stay at or above that starting value. This holds regardless of what `equity[t]` itself does later.
+The running peak is **seeded with `Initial Equity`** ([17.1](#171-initial-portfolio)) before the first daily equity is folded in. `equity[0]` is day-one **close** equity after day-one trading, which is not in general equal to `Initial Equity` and can even be exactly `0` ([21.11](#2111-zero-equity-and-division-safety)) — so seeding from `equity[0]` would both misreport a day-one loss as a fresh peak (`drawdown[0] = 0` even when day one closed below starting capital) and divide by zero in the day-one-wipeout case. With the `Initial Equity` seed, the division by `running_peak[t]` never divides by zero: `running_peak[t] >= Initial Equity > 0` for every `t`, since `Initial Equity > 0` is enforced at request-validation time ([21.1](#211-basic-metrics), `ZERO_INITIAL_EQUITY`) and `running_peak` is a running maximum that can only stay at or above that seed. This holds regardless of what `equity[t]` itself does later.
 
 `equity[t]` (the numerator) can still be `0` on some day `t` ([21.11](#2111-zero-equity-and-division-safety)) — when it is, `drawdown[t] = 0 / running_peak[t] - 1 = -1` exactly, a `-100%` drawdown from peak, which is an ordinary, well-defined value, not an error. Consequently `Maximum Drawdown` can legitimately equal `-1` (a full wipeout from the peak at some point in the backtest) — this is a valid, representable metric value, not a `null`/`N/A` case.
 
@@ -1336,8 +1336,10 @@ def capture_daily_equity(bar_date: date, bar_close: Decimal, state: EngineState)
     cash, shares = state.cash, state.shares   # as of right now -- the caller in 11.3 guarantees
                                                # this is exactly after bar_date's final segment
     equity = cash + shares * bar_close
-    state.running_peak = equity if state.running_peak is None else max(state.running_peak, equity)
-    drawdown = equity / state.running_peak - 1        # 21.4 -- running_peak > 0 always, see 21.11
+    state.running_peak = max(state.running_peak, equity)   # initialized to initial_equity
+                                                            # (17.1/21.4) at run start, never to
+                                                            # the first captured equity
+    drawdown = equity / state.running_peak - 1        # 21.4 -- running_peak >= initial_equity > 0
     zone_at_close = classify(bar_close)                # 7.5
     state.daily_equity_rows.append(DailyEquityRow(date=bar_date, close=bar_close, cash=cash,
                                                     shares=shares, equity=equity, drawdown=drawdown,
