@@ -439,11 +439,14 @@ class TestArchitectureBoundaries:
     AUTH_FILES = sorted((APP_DIR / "auth").glob("*.py"))
     API_FILES = sorted((APP_DIR / "api").rglob("*.py"))
 
-    def test_auth_and_api_do_not_import_engine_or_importing(self) -> None:
+    def test_auth_and_api_do_not_import_the_engine(self) -> None:
+        # The API layer may call the pure importing pipeline (datasets
+        # preview), but nothing in auth/api touches the backtest engine,
+        # and auth never touches the importing pipeline either.
         for path in [*self.AUTH_FILES, *self.API_FILES]:
-            source = path.read_text(encoding="utf-8")
-            assert "app.engine" not in source, path
-            assert "app.importing" not in source, path
+            assert "app.engine" not in path.read_text(encoding="utf-8"), path
+        for path in self.AUTH_FILES:
+            assert "app.importing" not in path.read_text(encoding="utf-8"), path
 
     def test_pure_packages_do_not_import_auth_jwt_or_db(self) -> None:
         for package in ("engine", "importing"):

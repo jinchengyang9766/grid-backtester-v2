@@ -6,9 +6,17 @@ from app.api.schemas.auth import (
     RegisteredUserResponse,
     RegisterRequest,
 )
+from app.api.schemas.datasets import (
+    DatasetPreviewResponse,
+    DatasetSavedResponse,
+    DatasetSaveRequest,
+)
 
 __all__ = [
     "AuthenticatedUserResponse",
+    "DatasetPreviewResponse",
+    "DatasetSaveRequest",
+    "DatasetSavedResponse",
     "LoginRequest",
     "RegisterRequest",
     "RegisteredUserResponse",

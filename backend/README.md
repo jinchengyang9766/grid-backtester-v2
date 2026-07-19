@@ -25,10 +25,22 @@ detailed implementation contract this backend is built against.
   JWT delivered exclusively in an `HttpOnly` cookie (`Path=/api`,
   `SameSite=Lax`, 24-hour default expiry). Errors use the standard
   `{"error": {"code", "message", "details?"}}` envelope.
-- **No dataset or backtest APIs exist yet.** Dataset upload/preview/save,
+- **Dataset preview/save: complete.** `POST /api/datasets/preview` accepts
+  a TongdaXin text-export `.xls` or a `.csv` upload (multipart), runs the
+  deterministic parsing/cleaning pipeline in memory, and returns the
+  mapping, bad/duplicate rows, cleaning summary, and a 30-minute
+  `preview_token`. `POST /api/datasets` persists the cleaned rows as a
+  `Dataset` plus `PriceBar` rows from that token alone. Editing the column
+  mapping requires a fresh preview call — a token is bound to exactly one
+  mapping/cleaning result. A successful save consumes the token. Raw
+  uploads are never persisted; only cleaned `PriceBar` rows are stored.
+  The preview cache is in-process (per application instance) and intended
+  for local single-worker use; a Redis-backed shared cache is deferred to
+  the background-job stage.
+- **No other business APIs exist yet.** Dataset list/detail/delete,
   backtest persistence endpoints, exports, and optimization APIs are not
-  implemented. There are no refresh tokens and no password-reset or
-  email-verification flow yet.
+  implemented, and the frontend upload wizard does not exist. There are no
+  refresh tokens and no password-reset or email-verification flow yet.
 
 ## Requirements
 
@@ -123,6 +135,7 @@ backend/
 │   ├── api/            # FastAPI routers, schemas, error envelope
 │   ├── auth/           # Argon2id hashing, JWTs, current-user dependency
 │   ├── core/           # Typed application settings
+│   ├── datasets/       # Preview cache + dataset preview/save services
 │   ├── db/             # SQLAlchemy base, engine/session, persistence models
 │   ├── domain/         # Pure domain models and enums
 │   ├── engine/         # Pure deterministic backtest engine (complete)
