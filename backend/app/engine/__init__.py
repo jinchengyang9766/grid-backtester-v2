@@ -1,5 +1,17 @@
 """Pure backtest-engine layer: baseline, zones, grids, paths, and crossings."""
 
+from app.engine.benchmark_models import (
+    BenchmarkDayOnePurchase,
+    BenchmarkEquityPoint,
+    BenchmarkSeries,
+)
+from app.engine.benchmarks import (
+    build_benchmark1,
+    build_benchmark2,
+    compute_benchmark2_day_one_purchase,
+    compute_benchmark2_prices,
+    select_benchmark2_reference_price,
+)
 from app.engine.costs import (
     compute_commission,
     compute_execution_price,
@@ -82,6 +94,9 @@ from app.engine.segment_models import (
 )
 
 __all__ = [
+    "BenchmarkDayOnePurchase",
+    "BenchmarkEquityPoint",
+    "BenchmarkSeries",
     "BoundaryKind",
     "CommissionConfig",
     "EmptyDatasetError",
@@ -120,6 +135,8 @@ __all__ = [
     "ZoneEvent",
     "apply_boundary_transition",
     "boundary_kind",
+    "build_benchmark1",
+    "build_benchmark2",
     "build_close_only_path",
     "build_grid_setup",
     "build_ohlcv_path",
@@ -128,6 +145,8 @@ __all__ = [
     "build_zone_boundaries",
     "canonical_grid_levels",
     "classify_zone",
+    "compute_benchmark2_day_one_purchase",
+    "compute_benchmark2_prices",
     "compute_commission",
     "compute_execution_price",
     "compute_slippage_amount",
@@ -147,6 +166,7 @@ __all__ = [
     "resolve_baseline",
     "resolve_grid_step",
     "round_to_tick",
+    "select_benchmark2_reference_price",
     "select_ohlc_midpoints",
     "transition_rule",
     "validate_execution_config",
