@@ -14,10 +14,14 @@ detailed implementation contract this backend is built against.
 - **Application infrastructure: minimal.** FastAPI app factory, typed
   Pydantic settings, SQLAlchemy 2.x base/session plumbing, and Alembic
   scaffolding exist, with a single `GET /health` endpoint.
-- **No application schema exists yet.** The declarative `Base` has no
-  tables and `alembic/versions/` contains no migrations. Users, datasets,
-  backtest persistence, authentication, uploads, and business endpoints
-  are not implemented.
+- **First persistence schema: exists.** `app/db/models/` defines the
+  `users`, `datasets`, and `price_bars` tables (SQLAlchemy 2.x typed
+  declarative models) and `alembic/versions/` contains the first
+  migration. Deleting a user cascades to their datasets, and deleting a
+  dataset cascades to its price bars, enforced at database level.
+- **No application APIs exist yet.** Authentication, registration/login,
+  dataset upload/preview endpoints, backtest persistence, and all other
+  business endpoints are not implemented. Nothing hashes passwords yet.
 
 ## Requirements
 
@@ -73,13 +77,16 @@ creation. The database URL comes from application settings
 from the `backend/` directory, for example:
 
 ```powershell
+alembic upgrade head    # apply all migrations (creates the schema)
+alembic downgrade base  # revert all migrations (drops the schema)
 alembic heads
 alembic history
 alembic current
 ```
 
-There are no migration revisions yet because no application tables have
-been defined.
+Alembic — not application startup — creates and drops tables; importing
+or running the API never emits DDL. The single revision so far creates
+`users`, `datasets`, and `price_bars`.
 
 ## Project layout
 
@@ -88,12 +95,12 @@ backend/
 ├── app/
 │   ├── api/            # FastAPI routers (health only, for now)
 │   ├── core/           # Typed application settings
-│   ├── db/             # SQLAlchemy base + engine/session infrastructure
+│   ├── db/             # SQLAlchemy base, engine/session, persistence models
 │   ├── domain/         # Pure domain models and enums
 │   ├── engine/         # Pure deterministic backtest engine (complete)
 │   ├── importing/      # Pure parsing/cleaning pipeline (complete)
 │   └── main.py         # FastAPI application factory
-├── alembic/            # Migration environment (no revisions yet)
+├── alembic/            # Migration environment and revisions
 ├── alembic.ini         # Alembic configuration (no database URL inside)
 ├── tests/              # Pytest suite
 ├── .env.example        # Example environment configuration (no secrets)

@@ -1,13 +1,15 @@
 """Alembic migration environment.
 
 The database URL comes from the application Settings (never hard-coded here),
-and target_metadata is the application's declarative Base metadata so
-autogenerate can diff future persistence models. No application tables exist
-yet; Alembic owns all schema creation when they do.
+with an optional per-invocation "sqlalchemy.url" config override used by the
+migration test suite to target temporary databases. Importing app.db.models
+registers every persistence model on Base.metadata before target_metadata is
+evaluated; Alembic owns all schema creation.
 """
 
 from logging.config import fileConfig
 
+import app.db.models  # noqa: F401  (registers models on Base.metadata)
 from alembic import context
 from app.core.config import get_settings
 from app.db.base import Base
@@ -21,6 +23,9 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
+    override = config.get_main_option("sqlalchemy.url")
+    if override:
+        return override
     return get_settings().database_url
 
 

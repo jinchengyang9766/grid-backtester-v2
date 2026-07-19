@@ -15,18 +15,28 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 def test_sqlite_url_receives_check_same_thread_flag() -> None:
-    with mock.patch.object(session_module, "create_engine") as fake_create:
+    with (
+        mock.patch.object(session_module, "create_engine") as fake_create,
+        mock.patch.object(session_module, "event") as fake_event,
+    ):
         session_module.create_database_engine("sqlite:///./anything.db")
     fake_create.assert_called_once_with(
         "sqlite:///./anything.db", connect_args={"check_same_thread": False}
+    )
+    fake_event.listen.assert_called_once_with(
+        fake_create.return_value, "connect", session_module._enable_sqlite_foreign_keys
     )
 
 
 def test_non_sqlite_url_gets_no_sqlite_connect_args() -> None:
     url = "postgresql+psycopg://user:secret@localhost:5432/grid"
-    with mock.patch.object(session_module, "create_engine") as fake_create:
+    with (
+        mock.patch.object(session_module, "create_engine") as fake_create,
+        mock.patch.object(session_module, "event") as fake_event,
+    ):
         session_module.create_database_engine(url)
     fake_create.assert_called_once_with(url, connect_args={})
+    fake_event.listen.assert_not_called()
 
 
 def test_in_memory_sqlite_engine_executes_select_one() -> None:

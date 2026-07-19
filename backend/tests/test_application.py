@@ -131,9 +131,9 @@ def test_app_modules_never_run_the_backtest_engine() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_base_is_declarative_and_has_no_tables() -> None:
+def test_base_is_declarative_with_only_first_slice_tables() -> None:
     assert issubclass(Base, DeclarativeBase)
-    assert dict(Base.metadata.tables) == {}
+    assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ def test_alembic_config_loads_without_live_database() -> None:
     config = Config(str(BACKEND_DIR / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == []  # no migration revisions exist yet
+    assert len(script.get_heads()) == 1  # exactly the first persistence migration
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ def test_engine_results_are_unchanged_with_infrastructure_imported() -> None:
 
 
 def test_no_business_models_auth_or_upload_code_introduced() -> None:
-    assert dict(Base.metadata.tables) == {}
+    assert set(Base.metadata.tables) == {"users", "datasets", "price_bars"}
     assert not (APP_DIR / "auth").exists()
     assert not (APP_DIR / "api" / "routes" / "datasets.py").exists()
     assert not (APP_DIR / "api" / "routes" / "backtests.py").exists()
