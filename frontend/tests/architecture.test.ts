@@ -71,21 +71,40 @@ describe("token handling", () => {
 });
 
 describe("scope of this slice", () => {
-  it("ships no Dataset or Backtest API client", () => {
+  it("ships only the auth and dataset API clients", () => {
     const apiModules = FILES.filter((file) => file.includes(join("lib", "api")));
     const names = apiModules.map((file) => relative(ROOT, file).replace(/\\/g, "/"));
     expect(names.sort()).toEqual([
       "lib/api/auth.ts",
       "lib/api/client.ts",
+      "lib/api/dataset-types.ts",
+      "lib/api/datasets.ts",
       "lib/api/errors.ts",
       "lib/api/types.ts",
     ]);
+  });
 
+  it("calls no backtest or optimization endpoint", () => {
     for (const file of FILES) {
-      const source = read(file);
-      expect(source).not.toMatch(/\/api\/datasets/);
-      expect(source).not.toMatch(/\/api\/backtests/);
-      expect(source).not.toMatch(/\/api\/optimizations/);
+      const source = code(file);
+      const name = relative(ROOT, file);
+      // /backtest/new is a page route, not an API call; only the API
+      // namespace is forbidden here.
+      expect(source, name).not.toMatch(/["'`]\/api\/backtests/);
+      expect(source, name).not.toMatch(/["'`]\/api\/optimizations/);
+    }
+  });
+
+  it("implements no strategy configuration or parsing in the browser", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      // Strategy fields belong to a later task.
+      expect(source, name).not.toMatch(/a_distance|c_distance|grid_step|trade_lots/);
+      expect(source, name).not.toMatch(/initial_cash|slippage|tick_size/);
+      // Parsing/cleaning is the backend's job; a second implementation here
+      // could disagree with the rows a preview token is bound to.
+      expect(source, name).not.toMatch(/parseCsv|cleanRows|parseFloat|Number\.parseFloat/);
     }
   });
 
@@ -123,6 +142,61 @@ describe("scope of this slice", () => {
       dependencies: Record<string, string>;
     };
     expect(Object.keys(pkg.dependencies).sort()).toEqual(["next", "react", "react-dom"]);
+  });
+});
+
+describe("upload and token handling", () => {
+  it("never persists the selected file or the preview token", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      expect(source, name).not.toMatch(/indexedDB|IDBDatabase/i);
+      expect(source, name).not.toMatch(/caches\.open|CacheStorage/);
+      expect(source, name).not.toMatch(/showSaveFilePicker|FileSystemHandle/);
+      // localStorage/sessionStorage are already banned globally above.
+    }
+  });
+
+  it("never puts a preview token in a URL or the DOM", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      // Only `dataset_id` may travel in the query string.
+      expect(source, name).not.toMatch(/[?&]preview_token=/);
+      expect(source, name).not.toMatch(/searchParams\.set\(\s*["'`]preview_token/);
+      expect(source, name).not.toMatch(/data-preview-token/);
+    }
+  });
+
+  it("never logs request material", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      expect(source, relative(ROOT, file)).not.toMatch(/console\.(log|info|debug|warn|error)/);
+    }
+  });
+
+  it("contains no chart or table library import", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      expect(source, name).not.toMatch(
+        /from\s+["'](recharts|chart\.js|d3|plotly|lightweight-charts|@tanstack\/react-table)/,
+      );
+    }
+  });
+
+  it("builds no history, result, export, or optimization page", () => {
+    const routes = FILES.filter((file) => file.endsWith(`${join("", "page.tsx")}`)).map((file) =>
+      relative(ROOT, file).replace(/\\/g, "/"),
+    );
+    expect(routes.sort()).toEqual([
+      "app/app/page.tsx",
+      "app/backtest/new/page.tsx",
+      "app/datasets/page.tsx",
+      "app/login/page.tsx",
+      "app/page.tsx",
+      "app/register/page.tsx",
+    ]);
   });
 });
 

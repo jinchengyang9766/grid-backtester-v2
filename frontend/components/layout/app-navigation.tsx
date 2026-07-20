@@ -1,25 +1,65 @@
+"use client";
+
 /**
- * The workspace navigation.
+ * Workspace navigation.
  *
- * Every destination beyond the overview is still unimplemented, so those
- * entries render as disabled text rather than links — a clickable route that
- * 404s would be worse than an honest "coming soon".
+ * Implemented destinations are real links; Backtest History has no page yet,
+ * so it renders as a disabled label rather than a link that would 404.
  */
 
-const PLANNED_SECTIONS = [
-  { label: "Datasets", description: "Upload and manage price data" },
-  { label: "New Backtest", description: "Configure and run a strategy" },
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const SECTIONS = [
+  { href: "/app", label: "Workspace", description: "Account overview" },
+  { href: "/datasets", label: "Datasets", description: "Manage saved price data" },
+  { href: "/backtest/new", label: "New Backtest", description: "Import data and configure a run" },
+] as const;
+
+const PENDING_SECTIONS = [
   { label: "Backtest History", description: "Review and compare past runs" },
 ] as const;
 
 export function AppNavigation() {
+  const pathname = usePathname();
+
   return (
     <nav aria-label="Workspace sections">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         Sections
       </h2>
       <ul className="mt-3 space-y-2">
-        {PLANNED_SECTIONS.map((section) => (
+        {SECTIONS.map((section) => {
+          const current = pathname === section.href;
+          return (
+            <li key={section.href}>
+              <Link
+                href={section.href}
+                aria-current={current ? "page" : undefined}
+                className={`block rounded-md border px-3 py-2.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                  current
+                    ? "border-sky-700 bg-sky-50 dark:bg-sky-950"
+                    : "border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                }`}
+              >
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-sm font-medium">{section.label}</span>
+                  {/* Current page stated in text, not by colour alone. */}
+                  {current && (
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-900 dark:bg-sky-900 dark:text-sky-100">
+                      Current
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-600 dark:text-slate-400">
+                  {section.description}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+
+        {PENDING_SECTIONS.map((section) => (
           <li key={section.label}>
             <div
               className="rounded-md border border-dashed border-slate-300 px-3 py-2.5 dark:border-slate-700"

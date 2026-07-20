@@ -48,13 +48,16 @@ grid-backtester-v2/
   four export endpoints (`trades.csv`, `equity.csv`, `result.json`,
   `report.pdf`) are implemented and tested. See
   [`backend/README.md`](backend/README.md) for the endpoint-level detail.
-- **Frontend: authentication foundation.** A Next.js App Router application
-  with TypeScript, Tailwind CSS, a same-origin `/api` proxy, a typed API
-  client, and the full register/login/logout/current-user experience:
-  `/` (public landing), `/login`, `/register`, and `/app` (authenticated
-  shell placeholder).
-- **Not yet implemented:** dataset and backtest frontend pages, the result
-  dashboard, charts, comparison and export UI, optimization (backend and
+- **Frontend: authentication and dataset management.** A Next.js App Router
+  application with TypeScript, Tailwind CSS, a same-origin `/api` proxy, and a
+  typed API client. Implemented pages: `/` (public landing), `/login`,
+  `/register`, `/app` (authenticated shell), `/datasets` (list, detail,
+  delete), and `/backtest/new` (upload → column mapping → cleaning review →
+  cleaned preview → dataset saved). Uploaded files and preview tokens stay in
+  memory only.
+- **Not yet implemented:** strategy configuration and backtest execution in the
+  UI (the upload wizard stops once the dataset is saved), backtest history, the
+  result dashboard, charts, comparison and export UI, optimization (backend and
   frontend), Celery/Redis, and Docker.
 
 See `docs/SPEC.md` Section 40 for the full implementation phase order.

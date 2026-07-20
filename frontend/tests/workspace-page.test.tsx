@@ -11,6 +11,7 @@ const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/app",
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -54,17 +55,27 @@ describe("workspace page", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
-  it("lists future sections as unavailable rather than broken links", async () => {
+  it("links to implemented sections and marks unbuilt ones unavailable", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: 1, email: "owner@example.com" }));
     renderWorkspace();
     await screen.findByRole("heading", { name: "Workspace" });
 
-    for (const label of ["Datasets", "New Backtest", "Backtest History"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
-      // Present as text, never as a navigable link to an unbuilt route.
-      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
-    }
-    expect(screen.getAllByText("Not available yet")).toHaveLength(3);
+    // Implemented in Task 21, so these are now real links.
+    expect(screen.getByRole("link", { name: /Datasets/ })).toHaveAttribute(
+      "href",
+      "/datasets",
+    );
+    expect(screen.getByRole("link", { name: /New Backtest/ })).toHaveAttribute(
+      "href",
+      "/backtest/new",
+    );
+
+    // History still has no page, so it must not be a navigable link.
+    expect(screen.getByText("Backtest History")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Backtest History/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("Not available yet")).toHaveLength(1);
   });
 
   it("shows no invented dataset or backtest figures", async () => {

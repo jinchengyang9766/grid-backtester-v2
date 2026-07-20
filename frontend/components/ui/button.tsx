@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "destructive";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -24,6 +24,10 @@ const VARIANTS: Record<Variant, string> = {
     "dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
   ghost:
     "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800",
+  // Irreversible actions read differently from the primary action.
+  destructive:
+    "bg-red-700 text-white hover:bg-red-800 disabled:hover:bg-red-700 " +
+    "focus-visible:outline-red-700",
 };
 
 export function Button({
