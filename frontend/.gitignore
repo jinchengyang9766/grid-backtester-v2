@@ -44,3 +44,20 @@ next-env.d.ts
 # test artifacts
 /coverage
 *.log
+
+# playwright: browser binaries, reports, traces, videos, screenshots, downloads
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+*.zip
+*.webm
+*.png
+!app/**/*.png
+!public/**/*.png
+
+# downloaded exports must never be committed
+backtest-*-trades.csv
+backtest-*-equity.csv
+backtest-*-result.json
+backtest-*-report.pdf

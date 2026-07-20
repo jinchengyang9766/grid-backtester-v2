@@ -19,6 +19,7 @@ import {
 } from "@/components/backtests/backtest-action-dialogs";
 import { DuplicateBacktestDialog } from "@/components/backtests/duplicate-backtest-dialog";
 import { BacktestDashboard } from "@/components/results/backtest-dashboard";
+import { ExportControls } from "@/components/results/export-controls";
 import { ResultStatus } from "@/components/results/result-status";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -280,6 +281,10 @@ export function BacktestDetailPage({ backtestId }: { backtestId: number }) {
           Delete
         </Button>
       </div>
+
+      {/* Rendered only once an owned detail has loaded, so an ownership 404
+          never offers a download. */}
+      <ExportControls backtestId={detail.id} status={detail.status} />
 
       <BacktestDashboard detail={detail} />
 

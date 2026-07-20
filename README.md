@@ -48,7 +48,7 @@ grid-backtester-v2/
   four export endpoints (`trades.csv`, `equity.csv`, `result.json`,
   `report.pdf`) are implemented and tested. See
   [`backend/README.md`](backend/README.md) for the endpoint-level detail.
-- **Frontend: complete through the result dashboard.** A Next.js App Router
+- **Frontend: complete through exports.** A Next.js App Router
   application with TypeScript, Tailwind CSS, a same-origin `/api` proxy, and a
   typed API client. Implemented pages: `/` (public landing), `/login`,
   `/register`, `/history` (the authenticated landing — searchable, filterable,
@@ -58,12 +58,21 @@ grid-backtester-v2/
   stored metrics), `/datasets` (list, detail, delete), and `/backtest/new`,
   which runs the full SPEC Section 28 wizard from upload through strategy
   configuration to execution. Runs can be renamed, rerun, duplicated with
-  edited settings, deleted, and compared. Financial values are handled as exact
+  edited settings, deleted, and compared, and all four exports download through
+  plain `<a download>` links so the browser streams each file straight to disk
+  without JavaScript touching the bytes. Financial values are handled as exact
   decimal strings and converted to numbers only at the SVG-coordinate boundary;
   uploaded files and preview tokens stay in memory only.
-- **Not yet implemented:** export download buttons (the backend export
-  endpoints exist), optimization (backend and frontend), Celery/Redis, and
-  Docker.
+- **End-to-end verified.** A Playwright (Chromium) suite drives the real
+  application against a real backend — registration, sign-in, the full dataset
+  wizard, strategy configuration and execution, history, the result dashboard,
+  rename/rerun/duplicate/delete/compare, all four downloads, and responsive and
+  accessibility sweeps at 390×844, 768×1024, and 1440×900. It starts both
+  servers itself against a throwaway database with a generated secret, so it
+  needs no manual setup and leaves nothing behind. See
+  [`frontend/README.md`](frontend/README.md#end-to-end-suite).
+- **Not yet implemented:** optimization (backend and frontend), Celery/Redis,
+  and Docker.
 
 See `docs/SPEC.md` Section 40 for the full implementation phase order.
 

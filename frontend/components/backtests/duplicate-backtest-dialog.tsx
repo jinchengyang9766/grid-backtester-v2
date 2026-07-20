@@ -24,6 +24,9 @@ import type { StrategyDatasetSummary } from "@/lib/backtests/configuration-state
 import type { ConfigurationFormState } from "@/lib/backtests/configuration-state";
 import type { FieldErrors } from "@/lib/backtests/configuration-validation";
 
+/** Ties the footer's submit button to the form inside the scrolling body. */
+const FORM_ID = "duplicate-strategy-form";
+
 export interface DuplicateDialogProps {
   open: boolean;
   sourceName: string;
@@ -63,9 +66,23 @@ export function DuplicateBacktestDialog({
       onClose={pending ? () => undefined : onCancel}
       dismissOnBackdrop={false}
       footer={
-        <Button variant="secondary" onClick={onCancel} disabled={pending}>
-          Cancel
-        </Button>
+        <>
+          {/* The strategy form is long enough to scroll, so its submit button
+              lives here instead: a dialog whose only visible action is Cancel
+              reads as though there is no way to confirm. `form` associates the
+              button with the form it submits, which the footer sits outside. */}
+          <Button
+            type="submit"
+            form={FORM_ID}
+            pending={pending}
+            pendingLabel="Running backtest…"
+          >
+            Run backtest
+          </Button>
+          <Button variant="secondary" onClick={onCancel} disabled={pending}>
+            Cancel
+          </Button>
+        </>
       }
     >
       <div className="space-y-4">
@@ -84,6 +101,8 @@ export function DuplicateBacktestDialog({
           onChange={onChange}
           onReset={onReset}
           onSubmit={onSubmit}
+          formId={FORM_ID}
+          showSubmitButton={false}
         />
       </div>
     </Dialog>

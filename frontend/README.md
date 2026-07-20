@@ -1,9 +1,9 @@
 # Grid Backtester V2 — frontend
 
 Next.js (App Router) + React + TypeScript + Tailwind CSS. Authentication,
-dataset management, backtest configuration and execution, history, and the
-persisted-result dashboard are implemented. Export download controls and
-optimization are **not** implemented yet.
+dataset management, backtest configuration and execution, history, the
+persisted-result dashboard, and export downloads are implemented. Optimization
+is **not** implemented yet.
 
 ## Requirements
 
@@ -342,6 +342,53 @@ Empty, single-point, flat, and all-zero series all render safely.
   Selection is limited to the visible page and is cleared, with an accessible
   notice, when filters or page change.
 
+## Exports
+
+The result dashboard offers all four backend exports:
+
+| Control | Endpoint | Downloaded as |
+|---|---|---|
+| Download trades CSV | `/api/backtests/{id}/exports/trades.csv` | `backtest-{id}-trades.csv` |
+| Download equity CSV | `/api/backtests/{id}/exports/equity.csv` | `backtest-{id}-equity.csv` |
+| Download complete result JSON | `/api/backtests/{id}/exports/result.json` | `backtest-{id}-result.json` |
+| Download PDF report | `/api/backtests/{id}/exports/report.pdf` | `backtest-{id}-report.pdf` |
+
+Each control is a plain **`<a download>` link**, not a button. Activating it is
+an ordinary browser navigation: the browser streams the response straight to
+disk using the backend's `Content-Disposition` filename. No JavaScript is
+involved — no `fetch`, no `Blob`, no `URL.createObjectURL`, no `FileReader`.
+That matters for more than simplicity: buffering a multi-megabyte export into a
+JavaScript string would decode bytes the browser should never interpret, cap the
+file at available memory, and give the download a browser-invented name instead
+of the server's. Nothing is parsed, re-serialized, or rendered client-side —
+in particular there is **no in-browser PDF viewer**, so the report the user
+opens is byte-for-byte the file the backend produced.
+
+The links are rendered whatever the run's status is; a FAILED or PENDING run
+carries a note that the file will contain no result data rather than hiding the
+control, so the backend stays the single authority on what an export contains.
+Ownership is enforced only server-side, by the same indistinguishable
+`404 BACKTEST_NOT_FOUND` used everywhere else. Links appear only after the
+detail request has confirmed the run loaded.
+
+## Accessibility and responsiveness
+
+- Verified at **390×844**, **768×1024**, and **1440×900**. No page scrolls
+  horizontally at any of those widths: wide content (result tables, charts)
+  scrolls inside its own container instead of pushing the document sideways.
+- Every page has one `main` landmark and exactly one `h1`; authenticated pages
+  add a `banner` header and a labelled navigation landmark.
+- A **Skip to main content** link is the first focusable element on
+  authenticated pages, visible once focused.
+- Dialogs are `aria-modal`, labelled by their heading, dismissed with `Escape`,
+  and return focus to the control that opened them.
+- Result tabs follow the ARIA tabs pattern, including `Arrow`/`Home`/`End`.
+- Charts are exposed as `img` with a `<title>` and a `<desc>`, and every figure
+  they show is also available as text in the result tables.
+- State is never conveyed by colour alone — the current nav item, run statuses,
+  and validation errors all say so in text. Errors are announced through live
+  regions.
+
 ## Verification
 
 ```powershell
@@ -349,7 +396,40 @@ npm run lint         # ESLint
 npm run typecheck    # tsc --noEmit (TypeScript strict mode)
 npm test -- --run    # Vitest + React Testing Library (jsdom)
 npm run build        # production build
+npm run test:e2e     # Playwright (Chromium) — see below
 ```
+
+### End-to-end suite
+
+```powershell
+npm run build        # test:e2e serves the production build
+npx playwright install chromium
+npm run test:e2e            # headless
+npm run test:e2e:headed     # watch it run
+```
+
+`e2e/global-setup.ts` starts **both** servers itself, so nothing needs to be
+running first. Each suite run gets:
+
+- its own **SQLite database in a temp directory outside the repository**, created
+  fresh and deleted afterwards — pass or fail;
+- a **randomly generated auth secret**, so no secret is hard-coded in
+  `playwright.config.ts` or committed anywhere;
+- dedicated ports (backend `8123`, frontend `3123`) that do not collide with a
+  developer's `8000`/`3000`.
+
+The price CSV is **generated at runtime** by `e2e/fixtures/data.ts`, so no
+financial dataset is checked in. Downloaded exports are read from Playwright's
+temp directory, asserted on, and deleted immediately; `test-results/`,
+`playwright-report/`, traces, videos, and screenshots are git-ignored.
+
+The suite drives real user flows — registration and sign-in, the full dataset
+wizard including a mapping edit and cleaning review, strategy configuration and
+execution, history and filters, the result dashboard, rename/rerun/duplicate/
+delete/compare, all four downloads, and the responsive and accessibility sweeps
+above. Every flow also asserts the browser console is free of errors, that no
+token is reachable from JavaScript, and that no unexpected server failures
+occurred.
 
 ## Structure
 
@@ -366,15 +446,21 @@ frontend/
     auth/                 login/register forms, logout button, route guards
     layout/               app header and navigation
     ui/                   button, input, form field, alert, loading state
+    results/              result dashboard, tabs, tables, export controls
+    history/              history list, filters, run actions, comparison
   lib/
     api/                  fetch client, typed error model, auth endpoints
     auth/                 authentication state provider and hook
+    backtests/            decimal-string arithmetic, metrics, chart data
     routing/              safe `?next=` handling
   tests/                  Vitest suites
+  e2e/                    Playwright suites
+    fixtures/             server lifecycle, auth helpers, generated data
+  playwright.config.ts
 ```
 
 ## Not implemented yet
 
-Export download controls (`trades.csv`, `equity.csv`, `result.json`,
-`report.pdf`), in-browser PDF rendering, and optimization. There is no
-end-to-end browser suite, and no deployment or Docker setup.
+Optimization (the backend exposes no optimization endpoint yet), and any
+deployment or Docker setup. In-browser PDF rendering is deliberately absent —
+see [Exports](#exports).

@@ -103,6 +103,39 @@ describe("request forwarding", () => {
     expect(new Headers(forwardedInit().headers).get("content-type")).toBe(boundary);
     expect(boundary).toContain("multipart/form-data; boundary=");
   });
+
+  it("streams a multipart body, so a large upload is never held in memory", async () => {
+    const form = new FormData();
+    form.append("file", new Blob(["date,close\n2024/01/01,1.00\n"]), "prices.csv");
+    await POST(
+      request("http://localhost:3000/api/datasets/preview", { method: "POST", body: form }),
+      params("datasets", "preview"),
+    );
+
+    const init = forwardedInit();
+    expect(init.body).toBeInstanceOf(ReadableStream);
+    // undici requires this whenever the body is a stream.
+    expect((init as { duplex?: string }).duplex).toBe("half");
+  });
+
+  it("buffers a JSON body, so a 401 response is not lost to a replay attempt", async () => {
+    // undici replays a request when the backend answers 401. A streamed body
+    // has already been consumed and cannot be replayed, so it raises "expected
+    // non-null body source", the real 401 never arrives, and the user is told
+    // the server is unavailable when their session had merely expired.
+    await POST(
+      request("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "a@b.c", password: "secret123" }),
+      }),
+      params("auth", "login"),
+    );
+
+    const init = forwardedInit();
+    expect(init.body).not.toBeInstanceOf(ReadableStream);
+    expect((init as { duplex?: string }).duplex).toBeUndefined();
+  });
 });
 
 describe("response forwarding", () => {

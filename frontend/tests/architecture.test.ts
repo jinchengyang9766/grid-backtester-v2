@@ -88,14 +88,32 @@ describe("scope of this slice", () => {
     ]);
   });
 
-  it("calls no optimization or export endpoint", () => {
+  it("calls no optimization endpoint", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      expect(source, relative(ROOT, file)).not.toMatch(/["'`]\/api\/optimizations/);
+    }
+  });
+
+  it("downloads exports natively, never through JavaScript", () => {
     for (const file of FILES) {
       const source = code(file);
       const name = relative(ROOT, file);
-      expect(source, name).not.toMatch(/["'`]\/api\/optimizations/);
-      // Export download controls belong to a later task.
-      expect(source, name).not.toMatch(/\/exports\//);
-      expect(source, name).not.toMatch(/trades\.csv|equity\.csv|result\.json|report\.pdf/);
+      // No script-driven download machinery anywhere in the app.
+      expect(source, name).not.toMatch(/createObjectURL|revokeObjectURL/);
+      expect(source, name).not.toMatch(/new\s+FileReader/);
+      expect(source, name).not.toMatch(/readAsText|readAsArrayBuffer|readAsDataURL/);
+      // No client-side parsing or rendering of exported content.
+      expect(source, name).not.toMatch(/pdfjs|react-pdf|papaparse|xlsx|sheetjs/i);
+    }
+  });
+
+  it("keeps export links out of the API client layer", () => {
+    // Downloads are plain anchors, so no export function belongs in lib/api.
+    const apiSources = FILES.filter((file) => file.includes(join("lib", "api")));
+    for (const file of apiSources) {
+      const source = code(file);
+      expect(source, relative(ROOT, file)).not.toMatch(/\/exports\//);
     }
   });
 

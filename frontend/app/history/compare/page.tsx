@@ -36,7 +36,7 @@ export default async function CompareBacktestsPage({
     >
       <div className="flex min-h-full flex-1 flex-col">
         <AppHeader />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+        <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
           <h1 className="text-2xl font-semibold tracking-tight">Compare backtests</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             Stored metrics side by side. Only backtest identifiers appear in

@@ -23,7 +23,7 @@ export default async function BacktestResultPage({
     <AuthGuard redirectPath={`/history/${id}`}>
       <div className="flex min-h-full flex-1 flex-col">
         <AppHeader />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <main id="main-content" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           <BacktestDetailPage backtestId={id} />
         </main>
       </div>

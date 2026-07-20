@@ -38,6 +38,14 @@ export interface StrategyConfigStepProps {
   submitPendingLabel?: string;
   startingValuesNote?: string;
   showBackLink?: boolean;
+  /**
+   * Set when the submit button lives outside this form — inside a dialog
+   * footer, for instance, where it must stay visible above a long scroll.
+   * The button associates itself with the form through this id.
+   */
+  formId?: string;
+  /** False when the submit button is rendered by the caller instead. */
+  showSubmitButton?: boolean;
 }
 
 function Section({
@@ -75,6 +83,8 @@ export function StrategyConfigStep({
   submitLabel = "Run backtest",
   submitPendingLabel = "Running backtest…",
   startingValuesNote = "The values below are starting values taken from the specification's example configuration, not recommendations. Review every section before running.",
+  formId,
+  showSubmitButton = true,
   showBackLink = true,
 }: StrategyConfigStepProps) {
   const update = (patch: Partial<ConfigurationFormState>) =>
@@ -82,6 +92,7 @@ export function StrategyConfigStep({
 
   return (
     <form
+      id={formId}
       className="space-y-6"
       onSubmit={(event) => {
         event.preventDefault();
@@ -307,9 +318,11 @@ export function StrategyConfigStep({
       <StrategySummary dataset={dataset} configuration={configuration} />
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" pending={pending} pendingLabel={submitPendingLabel}>
-          {submitLabel}
-        </Button>
+        {showSubmitButton && (
+          <Button type="submit" pending={pending} pendingLabel={submitPendingLabel}>
+            {submitLabel}
+          </Button>
+        )}
         <Button variant="secondary" onClick={onReset} disabled={pending}>
           Reset to defaults
         </Button>

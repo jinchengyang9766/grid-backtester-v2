@@ -556,10 +556,15 @@ describe("failed and pending runs", () => {
   });
 });
 
-describe("no export controls", () => {
-  it("offers no download buttons yet", async () => {
+describe("export controls", () => {
+  it("offers the four downloads as links, never as buttons", async () => {
     await renderDetail();
-    expect(screen.queryByRole("button", { name: /download|csv|pdf|export/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /download|csv|pdf|export/i })).not.toBeInTheDocument();
+
+    // Native navigations: the browser streams the file, so no button — and no
+    // JavaScript — is involved. Full coverage lives in export-controls.test.tsx.
+    expect(screen.getAllByRole("link", { name: /^Download/ })).toHaveLength(4);
+    expect(
+      screen.queryByRole("button", { name: /download|csv|pdf|export/i }),
+    ).not.toBeInTheDocument();
   });
 });

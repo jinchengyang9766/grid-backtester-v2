@@ -118,21 +118,42 @@ async function proxy(
   const method = request.method;
   const hasBody = method !== "GET" && method !== "HEAD";
 
+  // Only multipart uploads are streamed.
+  //
+  // Streaming is what keeps a multipart boundary byte-exact and lets an upload
+  // exceed available memory, so it is worth keeping for the one place that
+  // needs it. Everywhere else it is actively harmful: when the backend answers
+  // 401, undici prepares to replay the request with credentials, and a request
+  // whose body is a stream has already been consumed and cannot be replayed.
+  // It raises "expected non-null body source", the real 401 is discarded, and
+  // the user is told the server is unavailable when in fact their session had
+  // simply expired. JSON API bodies are small, so buffering them costs nothing
+  // and makes every 401 arrive intact.
+  const contentType = request.headers.get("content-type") ?? "";
+  const streamBody = hasBody && contentType.toLowerCase().startsWith("multipart/");
+  const body = hasBody ? (streamBody ? request.body : await request.arrayBuffer()) : undefined;
+
   let backendResponse: Response;
   try {
     backendResponse = await fetch(target, {
       method,
       headers: forwardRequestHeaders(request),
-      // Streamed straight through: multipart uploads keep their exact bytes
-      // and boundary, and nothing is decoded on the way.
-      body: hasBody ? request.body : undefined,
+      body,
       // Required by undici whenever a stream is used as the request body.
-      ...(hasBody ? { duplex: "half" } : {}),
+      ...(streamBody ? { duplex: "half" } : {}),
       redirect: "manual",
       cache: "no-store",
       signal: request.signal,
     } as RequestInit);
   } catch {
+    // A navigation away, or any other client-side abort, tears down this
+    // request too. That is not a backend outage, and reporting it as one puts
+    // a false "the server is unavailable" in front of a user who simply
+    // clicked something else. The client is already gone, so 499 is never
+    // rendered — it exists so the mistaken 502 cannot be.
+    if (request.signal.aborted) {
+      return jsonError(499, "REQUEST_ABORTED", "The request was cancelled.");
+    }
     // Never leak the backend origin or a stack trace to the browser.
     return jsonError(
       502,

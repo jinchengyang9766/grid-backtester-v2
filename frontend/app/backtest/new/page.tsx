@@ -35,7 +35,7 @@ export default async function NewBacktestPage({
     <AuthGuard redirectPath="/backtest/new">
       <div className="flex min-h-full flex-1 flex-col">
         <AppHeader />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+        <main id="main-content" className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
           <h1 className="text-2xl font-semibold tracking-tight">New backtest</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             Import price data, configure a strategy, and run it.

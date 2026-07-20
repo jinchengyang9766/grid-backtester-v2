@@ -36,6 +36,18 @@ out/
 backend/uploads/
 backend/generated_reports/
 
+# Playwright artifacts (browser binaries, reports, traces, videos, screenshots)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Downloaded exports (verified in tests, never committed)
+backtest-*-trades.csv
+backtest-*-equity.csv
+backtest-*-result.json
+backtest-*-report.pdf
+
 # Editors / OS
 .vscode/
 .idea/

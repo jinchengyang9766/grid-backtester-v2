@@ -22,7 +22,10 @@ export default function LandingPage() {
   const { state } = useAuth();
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-16">
+    <main
+      id="main-content"
+      className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-16"
+    >
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
         Grid Backtester
       </h1>

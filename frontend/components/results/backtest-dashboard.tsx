@@ -66,8 +66,12 @@ export function BacktestDashboard({ detail }: { detail: BacktestDetailWithSeries
         <div className="space-y-6">
           {hasMetrics ? (
             <>
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold">Headline figures</h3>
+              {/* Named so the block is a navigable landmark: several of these
+                  figures are repeated verbatim in the full metric sections. */}
+              <section aria-labelledby="headline-figures" className="space-y-2">
+                <h3 id="headline-figures" className="text-sm font-semibold">
+                  Headline figures
+                </h3>
                 <MetricGrid rows={headlineRows(metrics)} />
               </section>
               <MetricSectionBlock section={strategySection(metrics)} />
