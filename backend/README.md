@@ -126,9 +126,51 @@ detailed implementation contract this backend is built against.
   recomputation). Compare is all-or-nothing: any missing or wrong-owner
   id fails the whole request with an identical `404 BACKTEST_NOT_FOUND`
   that never reveals which id failed.
-- **Still pending.** Exports (CSV/JSON/PDF), optimization APIs, and the
-  frontend are not implemented. There are no refresh tokens and no
-  password-reset or email-verification flow yet.
+- **CSV/JSON exports: complete.** Three authenticated downloads per run:
+  `GET /api/backtests/{id}/exports/trades.csv`,
+  `GET /api/backtests/{id}/exports/equity.csv`, and
+  `GET /api/backtests/{id}/exports/result.json`. All three are read-only:
+  every file is generated in memory during the request and never written
+  to disk, cached, or stored in the database, and no export table or
+  export record exists. Ownership is the only access gate — a missing,
+  wrong-owner, or deleted run returns the same
+  `404 BACKTEST_NOT_FOUND` as every other backtest route, so existence is
+  never leaked; there is no status-based restriction.
+  - **CSV headers are frozen** (SPEC 25.4: each table's own columns minus
+    `id`). `trades.csv` is
+    `date, event_sequence, side, grid_price, execution_price, shares,
+    notional, commission, slippage_cost, cash_after, shares_after,
+    equity_after, status, skip_reason` — the internal `event_id` is
+    replaced by `date`/`event_sequence` joined from the parent
+    `backtest_events` row, and rows are ordered globally by
+    `event_sequence` (then `Trade.id`). `equity.csv` is
+    `backtest_run_id, date, close, cash, shares, equity, drawdown,
+    zone_at_close`, ordered by `date` then `id`, and covers the Daily
+    Close Equity series only (never EventEquity).
+  - **CSV serialization:** comma delimiter, one header row, UTF-8 with no
+    BOM, `\n` line terminator, and `Decimal` values as plain fixed-point
+    strings (never float, scientific notation, or thousands separators).
+    Dates are `YYYY-MM-DD`; SQL `NULL` becomes an empty field, so a
+    SKIPPED trade has empty `execution_price`/`notional`/`commission`/
+    `slippage_cost` while keeping its `skip_reason` and portfolio state.
+    Quoting and escaping go through the standard `csv` module.
+  - **`result.json`** returns exactly
+    `{ configuration, result_metrics, benchmark_1, benchmark_2,
+    dataset_summary }`. Stored JSON is copied verbatim — decimal strings
+    stay strings and metrics are never recomputed. Only the benchmark
+    *output* names are remapped: they project the already-persisted
+    `result_metrics.benchmark1`/`benchmark2` documents without rerunning
+    the engine. Null `result_metrics` yields null benchmarks.
+  - A run with no trades or no daily-equity rows returns `200` with the
+    header row and zero data rows — never a 404, and never synthetic rows.
+  - Downloads use `Content-Disposition: attachment` with deterministic
+    ASCII filenames built from the numeric run id
+    (`backtest-{id}-trades.csv`), never the user-editable run name.
+- **Still pending.** `report.pdf` export (SPEC 32) is **not** implemented —
+  no PDF generation, no chart rendering. Frontend download buttons,
+  optimization APIs, and the frontend as a whole are also not implemented.
+  There are no refresh tokens and no password-reset or email-verification
+  flow yet.
 
 ## Requirements
 
