@@ -105,9 +105,30 @@ detailed implementation contract this backend is built against.
   `404 BACKTEST_NOT_FOUND`. A FAILED run's detail returns null
   `result_metrics`, a populated `error_message`, and empty requested
   series.
-- **Still pending.** Rerun, duplicate, compare, exports, optimization
-  APIs, and the frontend are not implemented. There are no refresh
-  tokens and no password-reset or email-verification flow yet.
+- **Backtest rerun / duplicate / compare: complete.**
+  `POST /api/backtests/{id}/rerun` re-executes the source run's exact
+  stored configuration synchronously against the dataset's **current**
+  PriceBars, producing a new run (new id, auto-generated name using the
+  current UTC date) — the source run and its results are never touched.
+  `POST /api/backtests/{id}/duplicate` deep-merges an optional
+  `configuration_overrides` object onto the source configuration
+  (recursive merge: nested objects merge, scalars/null/lists replace
+  wholesale, untouched siblings preserved), validates the merged document
+  through the full configuration schema, and executes it as a new run —
+  it is not an unexecuted draft. Both reuse the same synchronous
+  execution path as create, so they return `201 COMPLETED` or
+  `201 FAILED` (never `PENDING`/`RUNNING`), and a malformed stored or
+  merged configuration returns 422 with no run created.
+  `POST /api/backtests/compare` accepts `{ "backtest_ids": [...] }` with
+  at least two distinct positive ids, loads them in one ownership-scoped
+  query, and returns `{ "runs": [{ id, name, result_metrics }] }` in
+  request order with stored `result_metrics` preserved verbatim (no
+  recomputation). Compare is all-or-nothing: any missing or wrong-owner
+  id fails the whole request with an identical `404 BACKTEST_NOT_FOUND`
+  that never reveals which id failed.
+- **Still pending.** Exports (CSV/JSON/PDF), optimization APIs, and the
+  frontend are not implemented. There are no refresh tokens and no
+  password-reset or email-verification flow yet.
 
 ## Requirements
 

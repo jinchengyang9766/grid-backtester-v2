@@ -12,9 +12,13 @@ from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
 from app.api.schemas.backtests import (
+    BacktestCompareRequest,
+    BacktestCompareResponse,
+    BacktestCompareRun,
     BacktestCreateRequest,
     BacktestCreateResponse,
     BacktestDetailResponse,
+    BacktestDuplicateRequest,
     BacktestListItem,
     BacktestListResponse,
     DailyEquityProjectionModel,
@@ -23,6 +27,7 @@ from app.api.schemas.backtests import (
     ZoneEventProjectionModel,
 )
 from app.auth.dependencies import get_current_user
+from app.backtests.comparison import compare_owned_backtests
 from app.backtests.history import (
     BACKTEST_STATUSES,
     delete_owned_backtest,
@@ -36,6 +41,7 @@ from app.backtests.projections import (
     load_trade_projection,
     load_zone_event_projection,
 )
+from app.backtests.replay import duplicate_backtest, rerun_backtest
 from app.backtests.service import create_backtest
 from app.db.models import BacktestRun, User
 from app.db.session import get_db_session
@@ -110,6 +116,25 @@ def list_backtests_endpoint(
         total=page.total,
         limit=page.limit,
         offset=page.offset,
+    )
+
+
+# Registered before the "/{backtest_id}" routes so the static path is never
+# shadowed (integer path conversion also rules it out, but order is deliberate).
+@router.post("/compare", response_model=BacktestCompareResponse)
+def compare_backtests_endpoint(
+    payload: BacktestCompareRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> BacktestCompareResponse:
+    runs = compare_owned_backtests(
+        session, current_user_id=current_user.id, backtest_ids=payload.backtest_ids
+    )
+    return BacktestCompareResponse(
+        runs=[
+            BacktestCompareRun(id=run.id, name=run.name, result_metrics=run.result_metrics)
+            for run in runs
+        ]
     )
 
 
@@ -206,3 +231,36 @@ def delete_backtest_endpoint(
 ) -> None:
     if not delete_owned_backtest(session, backtest_id=backtest_id, owner_user_id=current_user.id):
         raise _backtest_not_found()
+
+
+@router.post(
+    "/{backtest_id}/rerun",
+    status_code=status.HTTP_201_CREATED,
+    response_model=BacktestCreateResponse,
+)
+def rerun_backtest_endpoint(
+    backtest_id: int,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> BacktestRun:
+    return rerun_backtest(session, current_user_id=current_user.id, backtest_id=backtest_id)
+
+
+@router.post(
+    "/{backtest_id}/duplicate",
+    status_code=status.HTTP_201_CREATED,
+    response_model=BacktestCreateResponse,
+)
+def duplicate_backtest_endpoint(
+    backtest_id: int,
+    payload: BacktestDuplicateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> BacktestRun:
+    overrides = payload.configuration_overrides.model_dump(exclude_unset=True, mode="json")
+    return duplicate_backtest(
+        session,
+        current_user_id=current_user.id,
+        backtest_id=backtest_id,
+        configuration_overrides=overrides,
+    )

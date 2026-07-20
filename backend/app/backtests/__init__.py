@@ -1,5 +1,6 @@
 """Backtest application services: configuration adapting, execution, persistence."""
 
+from app.backtests.comparison import compare_owned_backtests
 from app.backtests.configuration import (
     AdaptedConfiguration,
     adapt_configuration,
@@ -24,6 +25,12 @@ from app.backtests.projections import (
     load_trade_projection,
     load_zone_event_projection,
 )
+from app.backtests.replay import (
+    configuration_request_from_stored,
+    deep_merge_configuration,
+    duplicate_backtest,
+    rerun_backtest,
+)
 from app.backtests.serialization import build_result_metrics, json_safe, plain_decimal
 from app.backtests.service import create_backtest
 
@@ -34,8 +41,12 @@ __all__ = [
     "ResultIntegrityError",
     "adapt_configuration",
     "build_result_metrics",
+    "compare_owned_backtests",
+    "configuration_request_from_stored",
     "create_backtest",
+    "deep_merge_configuration",
     "delete_owned_backtest",
+    "duplicate_backtest",
     "generate_backtest_name",
     "get_owned_backtest",
     "json_safe",
@@ -48,4 +59,5 @@ __all__ = [
     "persist_failed_run",
     "plain_decimal",
     "rename_owned_backtest",
+    "rerun_backtest",
 ]

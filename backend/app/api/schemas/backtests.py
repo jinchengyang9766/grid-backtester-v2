@@ -15,21 +15,31 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from app.db.models import BacktestRun, DailyEquity, EventEquity, Trade, ZoneEventRecord
 
 __all__ = [
+    "BacktestCompareRequest",
+    "BacktestCompareResponse",
+    "BacktestCompareRun",
     "BacktestConfigurationInput",
     "BacktestCreateRequest",
     "BacktestCreateResponse",
     "BacktestDetailResponse",
+    "BacktestDuplicateRequest",
     "BacktestListItem",
     "BacktestListResponse",
     "CommissionInput",
+    "CommissionOverride",
+    "ConfigurationOverride",
     "DailyEquityProjectionModel",
     "DatasetSummaryInBacktest",
     "EventEquityProjectionModel",
     "SlippageInput",
+    "SlippageOverride",
     "SlippageSideInput",
+    "SlippageSideOverride",
     "TickSizeInput",
+    "TickSizeOverride",
     "TradeProjectionModel",
     "ValueInput",
+    "ValueOverride",
     "ZoneEventProjectionModel",
 ]
 
@@ -382,3 +392,106 @@ class BacktestDetailResponse(BaseModel):
             "created_at": run.created_at,
             "completed_at": run.completed_at,
         }
+
+
+# --- Duplicate: partial configuration overrides (every field optional) -------
+# Each override mirrors its full-config counterpart with all fields optional
+# and extra="forbid" at every level; the merged document is validated through
+# BacktestConfigurationInput, which is the final authority.
+
+
+class ValueOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ValueModeLiteral | None = None
+    value: Decimal | None = None
+
+
+class TickSizeOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool | None = None
+    value: Decimal | None = None
+
+
+class CommissionOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rate_enabled: bool | None = None
+    rate: Decimal | None = None
+    minimum_enabled: bool | None = None
+    minimum: Decimal | None = None
+    fixed_enabled: bool | None = None
+    fixed: Decimal | None = None
+
+
+class SlippageSideOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ValueModeLiteral | None = None
+    value: Decimal | None = None
+
+
+class SlippageOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    shared: bool | None = None
+    mode: ValueModeLiteral | None = None
+    value: Decimal | None = None
+    buy: SlippageSideOverride | None = None
+    sell: SlippageSideOverride | None = None
+
+
+class ConfigurationOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    initial_cash: Decimal | None = None
+    initial_shares: int | None = None
+    lot_size: int | None = None
+    trade_lots: int | None = None
+    baseline: Decimal | None = None
+    a_distance: ValueOverride | None = None
+    c_distance: ValueOverride | None = None
+    grid_step: ValueOverride | None = None
+    tick_size: TickSizeOverride | None = None
+    ohlc_path_mode: Literal["HIGH_FIRST", "LOW_FIRST", "AUTO"] | None = None
+    buy_commission: CommissionOverride | None = None
+    sell_commission: CommissionOverride | None = None
+    slippage: SlippageOverride | None = None
+    risk_free_rate_annual: Decimal | None = None
+
+
+class BacktestDuplicateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    configuration_overrides: ConfigurationOverride = ConfigurationOverride()
+
+
+# --- Compare -----------------------------------------------------------------
+
+
+class BacktestCompareRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    backtest_ids: list[int]
+
+    @field_validator("backtest_ids")
+    @classmethod
+    def _at_least_two_distinct_positive(cls, value: list[int]) -> list[int]:
+        if any(item <= 0 for item in value):
+            raise ValueError("backtest_ids must be positive integers")
+        if len(value) < 2:
+            raise ValueError("compare requires at least two backtest ids")
+        if len(set(value)) != len(value):
+            raise ValueError("compare requires distinct backtest ids")
+        return value
+
+
+class BacktestCompareRun(BaseModel):
+    id: int
+    name: str
+    result_metrics: dict[str, Any] | None
+
+
+class BacktestCompareResponse(BaseModel):
+    runs: list[BacktestCompareRun]

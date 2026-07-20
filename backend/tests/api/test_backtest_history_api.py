@@ -474,5 +474,5 @@ class TestRegressionAndOpenApi:
         paths = api_app.openapi()["paths"]
         assert set(paths["/api/backtests"]) == {"post", "get"}
         assert set(paths["/api/backtests/{backtest_id}"]) == {"get", "patch", "delete"}
-        for forbidden in ("rerun", "duplicate", "compare", "exports"):
-            assert not any(forbidden in path for path in paths)
+        # rerun/duplicate/compare arrive in Task 18B2B; exports never here.
+        assert not any("export" in path for path in paths)

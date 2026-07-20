@@ -7,9 +7,12 @@ from app.api.schemas.auth import (
     RegisterRequest,
 )
 from app.api.schemas.backtests import (
+    BacktestCompareRequest,
+    BacktestCompareResponse,
     BacktestCreateRequest,
     BacktestCreateResponse,
     BacktestDetailResponse,
+    BacktestDuplicateRequest,
     BacktestListItem,
     BacktestListResponse,
 )
@@ -21,9 +24,12 @@ from app.api.schemas.datasets import (
 
 __all__ = [
     "AuthenticatedUserResponse",
+    "BacktestCompareRequest",
+    "BacktestCompareResponse",
     "BacktestCreateRequest",
     "BacktestCreateResponse",
     "BacktestDetailResponse",
+    "BacktestDuplicateRequest",
     "BacktestListItem",
     "BacktestListResponse",
     "DatasetPreviewResponse",

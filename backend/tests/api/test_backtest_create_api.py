@@ -369,16 +369,17 @@ class TestOpenApiAndArchitecture:
     def test_openapi_backtest_paths(self, api_app: FastAPI) -> None:
         paths = api_app.openapi()["paths"]
         assert "post" in paths["/api/backtests"]
-        for forbidden in ("rerun", "duplicate", "compare", "exports"):
-            assert not any(forbidden in path for path in paths)
+        assert not any("export" in path for path in paths)  # exports never here
         schemas = api_app.openapi()["components"]["schemas"]
         assert "BacktestCreateRequest" in schemas
         assert "BacktestCreateResponse" in schemas
 
     def test_route_and_persistence_layers_stay_clean(self) -> None:
         route_source = (APP_DIR / "api" / "routes" / "backtests.py").read_text(encoding="utf-8")
+        # The route never imports the engine or invokes it directly; all
+        # execution flows through services (create/rerun/duplicate).
         assert "app.engine" not in route_source
-        assert "run_backtest" not in route_source
+        assert "import run_backtest" not in route_source
         persistence_source = (APP_DIR / "backtests" / "persistence.py").read_text(encoding="utf-8")
         assert "compute_" not in persistence_source  # no metric recomputation
         for module in ("engine", "importing"):
