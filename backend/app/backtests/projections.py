@@ -22,14 +22,24 @@ __all__ = [
 
 
 def load_trade_projection(
-    session: Session, *, backtest_run_id: int
+    session: Session, *, backtest_run_id: int, limit: int | None = None
 ) -> list[tuple[Trade, datetime.date, int]]:
-    rows = session.execute(
+    """All trades of a run, or only the first ``limit`` by event sequence.
+
+    ``limit`` lets a bounded consumer (the PDF report's first-20-trades
+    table, SPEC 32) fetch just what it renders in the same single query,
+    instead of loading the whole history and slicing it. ``None`` keeps the
+    original full-series behaviour.
+    """
+    statement = (
         select(Trade, BacktestEvent.date, BacktestEvent.event_sequence)
         .join(BacktestEvent, Trade.event_id == BacktestEvent.id)
         .where(BacktestEvent.backtest_run_id == backtest_run_id)
         .order_by(BacktestEvent.event_sequence.asc(), Trade.id.asc())
-    ).all()
+    )
+    if limit is not None:
+        statement = statement.limit(limit)
+    rows = session.execute(statement).all()
     return [(row[0], row[1], row[2]) for row in rows]
 
 

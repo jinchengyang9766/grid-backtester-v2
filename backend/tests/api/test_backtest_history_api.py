@@ -474,11 +474,11 @@ class TestRegressionAndOpenApi:
         paths = api_app.openapi()["paths"]
         assert set(paths["/api/backtests"]) == {"post", "get"}
         assert set(paths["/api/backtests/{backtest_id}"]) == {"get", "patch", "delete"}
-        # Exports live on their own sub-paths (Task 19A) and never add a
-        # method to the list/detail routes; report.pdf is still pending.
+        # Exports live on their own sub-paths and never add a method to the
+        # list/detail routes. The export surface is now complete (Task 19B).
         assert sorted(path for path in paths if "/exports/" in path) == [
             "/api/backtests/{backtest_id}/exports/equity.csv",
+            "/api/backtests/{backtest_id}/exports/report.pdf",
             "/api/backtests/{backtest_id}/exports/result.json",
             "/api/backtests/{backtest_id}/exports/trades.csv",
         ]
-        assert not any("report.pdf" in path for path in paths)

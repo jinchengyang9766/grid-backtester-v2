@@ -166,11 +166,48 @@ detailed implementation contract this backend is built against.
   - Downloads use `Content-Disposition: attachment` with deterministic
     ASCII filenames built from the numeric run id
     (`backtest-{id}-trades.csv`), never the user-editable run name.
-- **Still pending.** `report.pdf` export (SPEC 32) is **not** implemented —
-  no PDF generation, no chart rendering. Frontend download buttons,
-  optimization APIs, and the frontend as a whole are also not implemented.
-  There are no refresh tokens and no password-reset or email-verification
-  flow yet.
+- **PDF report export: complete.**
+  `GET /api/backtests/{id}/exports/report.pdf` returns
+  `application/pdf` as an `attachment` named `backtest-{id}-report.pdf`
+  (numeric id only, never the editable run name). This completes the frozen
+  four-endpoint export surface of SPEC 25.4. Like the other three, it is
+  ownership-gated with the same `404 BACKTEST_NOT_FOUND`, and the document
+  is built in memory with ReportLab and returned directly — never written
+  to disk, cached, queued, or stored in the database, and there is no
+  export table or export record.
+  - **Sections follow SPEC 32's frozen order:** backtest name; security
+    information; data range; data-cleaning summary; strategy parameters;
+    fee/slippage assumptions; OHLC-path assumption; core metrics; both
+    Buy-and-Hold benchmarks; price chart; equity curve; drawdown chart;
+    first 20 trades; cost summary; risk disclaimer. Trade/zone statistics
+    and the baseline/grid geometry are rendered alongside the metrics.
+  - **Every value comes from persisted data** — `BacktestRun`,
+    its `Dataset`, the stored `configuration`/`result_metrics` documents,
+    and the normalized `DailyEquity`/`Trade` rows. The engine is never
+    invoked and no metric, benchmark, or grid level is recomputed. Charts
+    are drawn from `DailyEquity` (close, equity, drawdown) plus the
+    persisted benchmark point series, so `price_bars` is never queried.
+    Decimal values stay exact strings; a float appears only at the final
+    chart-coordinate boundary, never in rendered metric text.
+  - **Trade table is bounded to the first 20 trades** (SPEC 32 item 13),
+    ordered by `event_sequence` and fetched with a `LIMIT`ed query; the
+    report says so and points at `trades.csv` for the full history.
+  - **COMPLETED runs** get the full report. **FAILED/PENDING/RUNNING** runs
+    still return `200` with a report that states the status and the
+    sanitized `error_message`, shows configuration and dataset metadata,
+    and explicitly reports result data as unavailable — no metrics,
+    benchmarks, or charts are ever synthesized. Empty trade or
+    daily-equity series render a note instead of a chart.
+  - **Chinese metadata renders correctly** via ReportLab's built-in
+    `STSong-Light` CID font; no font file is downloaded or committed.
+    Latin/numeric text stays Helvetica. Tables wrap, repeat their header
+    row across page breaks, and every page is numbered.
+  - PDF metadata is limited to `Title: Backtest Report {id}`,
+    `Author: Grid Backtester`, `Subject: Backtest result report` — no
+    email, path, secret, or run name.
+- **Still pending.** Frontend download buttons and the frontend as a whole
+  are not implemented, and neither are the optimization APIs. There are no
+  refresh tokens and no password-reset or email-verification flow yet.
 
 ## Requirements
 

@@ -460,21 +460,24 @@ class TestNoDatabaseWrites:
 
 
 class TestOpenApi:
-    def test_exactly_three_export_routes_with_correct_media_types(self, api_app: FastAPI) -> None:
+    def test_the_three_non_pdf_export_routes_keep_their_media_types(self, api_app: FastAPI) -> None:
         schema = api_app.openapi()
-        export_routes = sorted(path for path in schema["paths"] if "/exports/" in path)
-        assert export_routes == [
-            "/api/backtests/{backtest_id}/exports/equity.csv",
-            "/api/backtests/{backtest_id}/exports/result.json",
-            "/api/backtests/{backtest_id}/exports/trades.csv",
-        ]
-        for path in export_routes[:2] + export_routes[2:]:
+        expected = {
+            "/api/backtests/{backtest_id}/exports/trades.csv": "text/csv",
+            "/api/backtests/{backtest_id}/exports/equity.csv": "text/csv",
+            "/api/backtests/{backtest_id}/exports/result.json": "application/json",
+        }
+        for path, media_type in expected.items():
             content = schema["paths"][path]["get"]["responses"]["200"]["content"]
-            expected = "application/json" if path.endswith("result.json") else "text/csv"
-            assert list(content) == [expected], (path, content)
+            assert list(content) == [media_type], (path, content)
 
-    def test_report_pdf_is_not_registered_yet(self, api_app: FastAPI) -> None:
-        assert not [path for path in api_app.openapi()["paths"] if "report.pdf" in path]
+    def test_report_pdf_is_registered_alongside_them(self, api_app: FastAPI) -> None:
+        # Task 19B completed the frozen export surface (SPEC 25.4).
+        paths = api_app.openapi()["paths"]
+        pdf_path = "/api/backtests/{backtest_id}/exports/report.pdf"
+        assert pdf_path in paths
+        assert list(paths[pdf_path]["get"]["responses"]["200"]["content"]) == ["application/pdf"]
+        assert len([path for path in paths if "/exports/" in path]) == 4
 
 
 class TestRegression:

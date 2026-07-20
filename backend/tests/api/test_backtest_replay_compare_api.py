@@ -415,14 +415,14 @@ class TestOpenApiAndRegression:
         assert "post" in paths["/api/backtests/compare"]
         assert "post" in paths["/api/backtests/{backtest_id}/rerun"]
         assert "post" in paths["/api/backtests/{backtest_id}/duplicate"]
-        # The eight operations are unchanged by Task 19A's read-only export
-        # GETs; report.pdf remains unimplemented.
+        # The eight operations are unchanged by the read-only export GETs,
+        # whose surface is now complete (Task 19B).
         assert sorted(path for path in paths if "/exports/" in path) == [
             "/api/backtests/{backtest_id}/exports/equity.csv",
+            "/api/backtests/{backtest_id}/exports/report.pdf",
             "/api/backtests/{backtest_id}/exports/result.json",
             "/api/backtests/{backtest_id}/exports/trades.csv",
         ]
-        assert not any("report.pdf" in path for path in paths)
         schemas = api_app.openapi()["components"]["schemas"]
         assert "BacktestDuplicateRequest" in schemas
         assert "BacktestCompareRequest" in schemas

@@ -22,6 +22,7 @@ from app.backtests.exports import (
     build_trades_csv,
 )
 from app.backtests.history import get_owned_backtest
+from app.backtests.pdf_report import build_backtest_pdf_report
 from app.db.models import BacktestRun, User
 from app.db.session import get_db_session
 
@@ -43,6 +44,10 @@ class CsvResponse(Response):
 
 class JsonDownloadResponse(Response):
     media_type = "application/json"
+
+
+class PdfResponse(Response):
+    media_type = "application/pdf"
 
 
 def _backtest_not_found() -> ApiError:
@@ -124,4 +129,23 @@ def export_result_json_endpoint(
         content=json.dumps(document, ensure_ascii=False),
         media_type="application/json",
         headers=_attachment_headers(f"backtest-{run.id}-result.json"),
+    )
+
+
+@router.get(
+    "/{backtest_id}/exports/report.pdf",
+    response_class=PdfResponse,
+    responses={404: {"description": "Not found or not owned"}},
+)
+def export_report_pdf_endpoint(
+    backtest_id: int,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> Response:
+    run = _load_owned_run(session, backtest_id=backtest_id, user=current_user)
+    content = build_backtest_pdf_report(session, run=run)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers=_attachment_headers(f"backtest-{run.id}-report.pdf"),
     )

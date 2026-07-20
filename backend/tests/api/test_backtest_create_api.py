@@ -369,10 +369,9 @@ class TestOpenApiAndArchitecture:
     def test_openapi_backtest_paths(self, api_app: FastAPI) -> None:
         paths = api_app.openapi()["paths"]
         assert "post" in paths["/api/backtests"]
-        # Exports are read-only GETs on their own sub-path (Task 19A); the
-        # create route itself never gained one, and report.pdf is pending.
+        # Exports are read-only GETs on their own sub-paths; the create route
+        # itself never gained one.
         assert not any("export" in path for path in paths if "post" in paths[path])
-        assert not any("report.pdf" in path for path in paths)
         schemas = api_app.openapi()["components"]["schemas"]
         assert "BacktestCreateRequest" in schemas
         assert "BacktestCreateResponse" in schemas

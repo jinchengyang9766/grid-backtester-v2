@@ -21,6 +21,11 @@ from app.backtests.history import (
     list_owned_backtests,
     rename_owned_backtest,
 )
+from app.backtests.pdf_report import (
+    FIRST_TRADE_ROWS,
+    RISK_DISCLAIMER,
+    build_backtest_pdf_report,
+)
 from app.backtests.persistence import (
     ResultIntegrityError,
     persist_completed_run,
@@ -46,9 +51,12 @@ __all__ = [
     "BACKTEST_STATUSES",
     "BacktestListPage",
     "DAILY_EQUITY_CSV_HEADER",
+    "FIRST_TRADE_ROWS",
+    "RISK_DISCLAIMER",
     "ResultIntegrityError",
     "TRADE_CSV_HEADER",
     "adapt_configuration",
+    "build_backtest_pdf_report",
     "build_complete_result_document",
     "build_daily_equity_csv",
     "build_result_metrics",
