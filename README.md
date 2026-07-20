@@ -42,18 +42,28 @@ grid-backtester-v2/
   planning, order execution, equity capture, two buy-and-hold benchmarks,
   metrics, and the full `run_backtest` orchestration are implemented and
   tested in `backend/app/` as framework-free Python.
-- **Backend application: infrastructure only.** A FastAPI application with
-  typed settings, SQLAlchemy 2.x session infrastructure, Alembic
-  scaffolding, and a `GET /health` endpoint exists. No application
-  database schema has been created yet.
-- **Not yet implemented:** users/authentication, dataset upload APIs,
-  backtest persistence and business endpoints, exports, optimization,
-  frontend, Celery/Redis, and Docker.
+- **Backend application: complete through exports.** Cookie-based
+  authentication, dataset preview/save/management APIs, backtest execution
+  and persistence, history/rename/delete, rerun/duplicate/compare, and all
+  four export endpoints (`trades.csv`, `equity.csv`, `result.json`,
+  `report.pdf`) are implemented and tested. See
+  [`backend/README.md`](backend/README.md) for the endpoint-level detail.
+- **Frontend: authentication foundation.** A Next.js App Router application
+  with TypeScript, Tailwind CSS, a same-origin `/api` proxy, a typed API
+  client, and the full register/login/logout/current-user experience:
+  `/` (public landing), `/login`, `/register`, and `/app` (authenticated
+  shell placeholder).
+- **Not yet implemented:** dataset and backtest frontend pages, the result
+  dashboard, charts, comparison and export UI, optimization (backend and
+  frontend), Celery/Redis, and Docker.
 
 See `docs/SPEC.md` Section 40 for the full implementation phase order.
 
 ## Getting started
 
-Backend setup instructions: [`backend/README.md`](backend/README.md).
+- Backend setup: [`backend/README.md`](backend/README.md)
+- Frontend setup: [`frontend/README.md`](frontend/README.md)
 
-Frontend setup instructions will be added once the frontend is initialized.
+Run the backend first (it listens on `http://127.0.0.1:8000` by default), then
+start the frontend with `BACKEND_ORIGIN` pointing at it. The browser only ever
+talks to the Next.js origin, which proxies `/api/*` to the backend.
