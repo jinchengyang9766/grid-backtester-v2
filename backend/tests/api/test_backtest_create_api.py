@@ -366,12 +366,11 @@ class TestRegression:
 
 
 class TestOpenApiAndArchitecture:
-    def test_openapi_has_only_post_backtests(self, api_app: FastAPI) -> None:
+    def test_openapi_backtest_paths(self, api_app: FastAPI) -> None:
         paths = api_app.openapi()["paths"]
-        assert set(paths["/api/backtests"]) == {"post"}
-        assert not any(
-            path.startswith("/api/backtests/") for path in paths
-        )  # no detail/history routes
+        assert "post" in paths["/api/backtests"]
+        for forbidden in ("rerun", "duplicate", "compare", "exports"):
+            assert not any(forbidden in path for path in paths)
         schemas = api_app.openapi()["components"]["schemas"]
         assert "BacktestCreateRequest" in schemas
         assert "BacktestCreateResponse" in schemas

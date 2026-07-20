@@ -86,10 +86,28 @@ detailed implementation contract this backend is built against.
     `benchmark1`/`benchmark2` (series points + day-one purchase), and
     `final_state`. The normalized Trade/ZoneEvent/DailyEquity/EventEquity
     series are never duplicated inside it.
-- **No Backtest history APIs yet.** List/detail/rename/delete, rerun,
-  duplicate, compare, exports, optimization APIs, and the frontend are
-  not implemented. There are no refresh tokens and no password-reset or
-  email-verification flow yet.
+- **Backtest history: complete.** `GET /api/backtests` lists the current
+  user's runs newest-first with limit/offset pagination (default
+  `limit=20`, max 100, `offset=0`; response is
+  `{items, total, limit, offset}` with `total` counted before
+  pagination), case-insensitive `?search=` name substring, and
+  `?dataset_id=` / `?status=` filters. `GET /api/backtests/{id}` returns
+  full metadata (configuration, result_metrics, dataset summary) and adds
+  the normalized series only on request via
+  `?include=trades,zone_events,daily_equity,event_equity` — event-scoped
+  series join `date`/`event_sequence`/`market_price` from the
+  `backtest_events` backbone, all Decimals as plain strings.
+  `PATCH /api/backtests/{id}` is rename-only (any other field →
+  `422 IMMUTABLE_FIELD`); `DELETE /api/backtests/{id}` removes the run
+  and every result row via database cascades (204, irreversible), after
+  which its dataset becomes deletable again. All access is
+  ownership-scoped: missing and wrong-owner runs return the identical
+  `404 BACKTEST_NOT_FOUND`. A FAILED run's detail returns null
+  `result_metrics`, a populated `error_message`, and empty requested
+  series.
+- **Still pending.** Rerun, duplicate, compare, exports, optimization
+  APIs, and the frontend are not implemented. There are no refresh
+  tokens and no password-reset or email-verification flow yet.
 
 ## Requirements
 

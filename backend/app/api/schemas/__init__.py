@@ -9,6 +9,9 @@ from app.api.schemas.auth import (
 from app.api.schemas.backtests import (
     BacktestCreateRequest,
     BacktestCreateResponse,
+    BacktestDetailResponse,
+    BacktestListItem,
+    BacktestListResponse,
 )
 from app.api.schemas.datasets import (
     DatasetPreviewResponse,
@@ -20,6 +23,9 @@ __all__ = [
     "AuthenticatedUserResponse",
     "BacktestCreateRequest",
     "BacktestCreateResponse",
+    "BacktestDetailResponse",
+    "BacktestListItem",
+    "BacktestListResponse",
     "DatasetPreviewResponse",
     "DatasetSaveRequest",
     "DatasetSavedResponse",
