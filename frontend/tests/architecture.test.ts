@@ -71,11 +71,13 @@ describe("token handling", () => {
 });
 
 describe("scope of this slice", () => {
-  it("ships only the auth and dataset API clients", () => {
+  it("ships only the auth, dataset, and backtest API clients", () => {
     const apiModules = FILES.filter((file) => file.includes(join("lib", "api")));
     const names = apiModules.map((file) => relative(ROOT, file).replace(/\\/g, "/"));
     expect(names.sort()).toEqual([
       "lib/api/auth.ts",
+      "lib/api/backtest-types.ts",
+      "lib/api/backtests.ts",
       "lib/api/client.ts",
       "lib/api/dataset-types.ts",
       "lib/api/datasets.ts",
@@ -84,27 +86,50 @@ describe("scope of this slice", () => {
     ]);
   });
 
-  it("calls no backtest or optimization endpoint", () => {
+  it("calls no optimization endpoint and no backtest sub-resource", () => {
     for (const file of FILES) {
       const source = code(file);
       const name = relative(ROOT, file);
-      // /backtest/new is a page route, not an API call; only the API
-      // namespace is forbidden here.
-      expect(source, name).not.toMatch(/["'`]\/api\/backtests/);
       expect(source, name).not.toMatch(/["'`]\/api\/optimizations/);
+      // Creation and single-run detail only: history listing, compare,
+      // rerun, duplicate, and exports all belong to later tasks.
+      expect(source, name).not.toMatch(/\/rerun/);
+      expect(source, name).not.toMatch(/\/duplicate/);
+      expect(source, name).not.toMatch(/\/api\/backtests\/compare/);
+      expect(source, name).not.toMatch(/\/exports\//);
+      // No result-series include is ever requested.
+      expect(source, name).not.toMatch(/include=.*(trades|daily_equity|event_equity)/);
     }
   });
 
-  it("implements no strategy configuration or parsing in the browser", () => {
+  it("never parses or cleans price data in the browser", () => {
     for (const file of FILES) {
       const source = code(file);
       const name = relative(ROOT, file);
-      // Strategy fields belong to a later task.
-      expect(source, name).not.toMatch(/a_distance|c_distance|grid_step|trade_lots/);
-      expect(source, name).not.toMatch(/initial_cash|slippage|tick_size/);
-      // Parsing/cleaning is the backend's job; a second implementation here
-      // could disagree with the rows a preview token is bound to.
-      expect(source, name).not.toMatch(/parseCsv|cleanRows|parseFloat|Number\.parseFloat/);
+      // A second implementation here could disagree with the rows a preview
+      // token is bound to, or with the executed prices.
+      expect(source, name).not.toMatch(/parseCsv|cleanRows/);
+      // No grid or engine simulation. Matched as identifiers, so ordinary
+      // prose such as the risk disclaimer's "simulated" is not a hit.
+      expect(source, name).not.toMatch(/\b(generateGrid|buildGridLevels|runEngine)\b/);
+      expect(source, name).not.toMatch(/\bsimulate[A-Z]\w*\(/);
+    }
+  });
+
+  it("never converts a financial value through floating point", () => {
+    const financial = FILES.filter(
+      (file) =>
+        file.includes(join("lib", "backtests")) ||
+        file.includes(join("components", "backtests")),
+    );
+    expect(financial.length).toBeGreaterThan(0);
+    for (const file of financial) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      expect(source, name).not.toMatch(/parseFloat|Number\.parseFloat/);
+      expect(source, name).not.toMatch(/toFixed\(/);
+      // Number(...) as a conversion; Number.isSafeInteger etc. are fine.
+      expect(source, name).not.toMatch(/[^.\w]Number\(/);
     }
   });
 
@@ -182,6 +207,30 @@ describe("upload and token handling", () => {
       expect(source, name).not.toMatch(
         /from\s+["'](recharts|chart\.js|d3|plotly|lightweight-charts|@tanstack\/react-table)/,
       );
+    }
+  });
+
+  it("persists no strategy configuration in the browser", () => {
+    const strategyModules = FILES.filter(
+      (file) =>
+        file.includes(join("lib", "backtests")) ||
+        file.includes(join("components", "backtests")),
+    );
+    for (const file of strategyModules) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      expect(source, name).not.toMatch(/localStorage|sessionStorage|indexedDB/i);
+    }
+  });
+
+  it("never puts a configuration or metric in a URL", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      const name = relative(ROOT, file);
+      // Only dataset_id and backtest_id may appear as query parameters.
+      expect(source, name).not.toMatch(/[?&]configuration=/);
+      expect(source, name).not.toMatch(/[?&]result_metrics=/);
+      expect(source, name).not.toMatch(/[?&]initial_cash=/);
     }
   });
 

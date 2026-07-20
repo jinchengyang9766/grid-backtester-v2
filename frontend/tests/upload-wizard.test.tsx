@@ -665,7 +665,7 @@ describe("PREVIEW and save", () => {
     expect(url).not.toContain("token-A");
   });
 
-  it("shows the saved handoff without a strategy form", async () => {
+  it("shows the saved handoff with a working strategy handoff", async () => {
     await reachPreview();
     fetchMock.mockResolvedValueOnce(
       jsonResponse(
@@ -685,11 +685,14 @@ describe("PREVIEW and save", () => {
     await screen.findByText("Dataset saved");
 
     expect(screen.getByText("Saved set")).toBeInTheDocument();
-    expect(screen.getByText("Coming next")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Configure strategy" })).toBeDisabled();
-    // No strategy inputs exist yet.
-    expect(screen.queryByLabelText(/initial cash/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/grid step/i)).not.toBeInTheDocument();
+    // The handoff is now functional and navigates by dataset id alone.
+    const configure = screen.getByRole("button", { name: "Configure strategy" });
+    expect(configure).toBeEnabled();
+
+    await userEvent.click(configure);
+    expect(replace).toHaveBeenLastCalledWith("/backtest/new?dataset_id=42&configure=1");
+    // Still no token in the URL.
+    expect(String(replace.mock.calls.at(-1)?.[0])).not.toContain("preview_token");
   });
 
   it("never calls a backtest endpoint", async () => {

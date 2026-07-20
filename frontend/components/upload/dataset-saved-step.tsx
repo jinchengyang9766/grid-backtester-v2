@@ -10,11 +10,16 @@ import type { SavedDatasetHandoff } from "@/lib/datasets/wizard-state";
 /**
  * DATASET_SAVED (SPEC Section 28).
  *
- * The handoff Task 22 continues from. Strategy configuration is deliberately
- * not built here — the control below is inert and labelled as such rather
- * than being a form that cannot yet do anything.
+ * The dataset is persisted and the wizard hands off to strategy
+ * configuration; only the dataset id is needed from here on.
  */
-export function DatasetSavedStep({ dataset }: { dataset: SavedDatasetHandoff }) {
+export function DatasetSavedStep({
+  dataset,
+  onConfigureStrategy,
+}: {
+  dataset: SavedDatasetHandoff;
+  onConfigureStrategy: () => void;
+}) {
   const rows: [string, string][] = [
     ["Dataset ID", String(dataset.id)],
     ["Data mode", dataModeLabel(dataset.data_mode)],
@@ -35,8 +40,8 @@ export function DatasetSavedStep({ dataset }: { dataset: SavedDatasetHandoff }) 
           Next step: configure the strategy
         </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Strategy configuration and backtest execution are not implemented
-          yet. This dataset is saved and will be available when they are.
+          Set the portfolio, grid geometry, fees, and slippage, then run the
+          backtest against this dataset.
         </p>
       </div>
 
@@ -50,12 +55,7 @@ export function DatasetSavedStep({ dataset }: { dataset: SavedDatasetHandoff }) 
       </dl>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button disabled title="Strategy configuration is not implemented yet">
-          Configure strategy
-        </Button>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          Coming next
-        </span>
+        <Button onClick={onConfigureStrategy}>Configure strategy</Button>
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">

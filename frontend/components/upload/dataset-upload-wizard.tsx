@@ -256,7 +256,14 @@ export function DatasetUploadWizard({
     return (
       <>
         <WizardProgress step="DATASET_SAVED" />
-        <DatasetSavedStep dataset={saved} />
+        <DatasetSavedStep
+          dataset={saved}
+          // The strategy half needs only the id, so hand off through the URL:
+          // a reload then resumes without the File or the preview token.
+          onConfigureStrategy={() =>
+            router.replace(`/backtest/new?dataset_id=${saved.id}&configure=1`)
+          }
+        />
       </>
     );
   }

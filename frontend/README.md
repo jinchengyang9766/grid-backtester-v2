@@ -133,14 +133,12 @@ Accepted uploads are **`.xls`** and **`.csv`**. A `.xls` file must be a
 the backend rejects real OLE2/ZIP spreadsheets with
 `400 UNSUPPORTED_FILE_TYPE`.
 
-The wizard implements SPEC Section 28 up to `DATASET_SAVED`:
+The wizard implements SPEC Section 28 end to end:
 
 ```text
 UPLOAD → DETECTING → MAPPING → CLEANING_REVIEW → PREVIEW → DATASET_SAVED
+       → STRATEGY_CONFIG → RUNNING → DONE
 ```
-
-`STRATEGY_CONFIG`, `RUNNING`, and `DONE` are **not** implemented — the saved
-state ends with an inert "Configure strategy" control marked *Coming next*.
 
 - **Upload** posts the file to `/api/datasets/preview` as `multipart/form-data`
   through the same-origin proxy, which streams the body so the multipart
@@ -202,6 +200,76 @@ original filename, data mode, date range, row count, and creation time.
 There is no rename or edit control, because the backend exposes no dataset
 update endpoint.
 
+## Strategy configuration and execution
+
+From `DATASET_SAVED` onward only the dataset **id** matters — the original file
+and the preview token are no longer needed, so `/backtest/new?dataset_id={id}`
+resumes cleanly after a reload and `/datasets → Use for backtest` enters the
+same flow.
+
+### Sections
+
+The form covers every field of the backend's `BacktestConfigurationInput`,
+grouped as: **Portfolio** (initial cash/shares, lot size, trade lots),
+**Grid geometry** (optional baseline, A distance, C distance, grid step),
+**Price execution** (tick size, intraday path mode), **Fees** (independent buy
+and sell commissions, each with rate/minimum/fixed and its own enable flag),
+**Slippage** (shared or separate per side), and **Risk assumptions** (annual
+risk-free rate). A review section restates everything from form state before
+the run; it never projects a return, trade count, or equity.
+
+Starting values come from SPEC Section 25.3's illustrative request — the only
+complete configuration the specification writes down. They are **starting
+values, not frozen defaults** (the schema only defaults `baseline`,
+`tick_size.value`, and `ohlc_path_mode` to null), and deliberately not the
+Task-12 real-file smoke configuration, which is tuned to one security. Reset
+restores them without changing the selected dataset.
+
+### Decimal handling
+
+Every financial value stays a **string** from keystroke to request body. It is
+never passed through `Number`, `parseFloat`, unary `+`, or `toFixed`: binary
+floating point cannot represent most decimal fractions exactly, so one
+conversion would silently alter a price or rate before the backend's `Decimal`
+parser saw it. Comparison (for example "C must exceed A") uses BigInt-scaled
+integers, which is exact at any magnitude and treats `1`, `1.0`, and `1.000` as
+equal. Percentages shown next to a rate are produced by shifting digits, not by
+multiplying. Even integer counts travel as digit strings — Pydantic coerces
+them losslessly, whereas a JavaScript number would cap at 2^53. Nothing is
+rounded client-side; the backend remains the final parser and the final
+validation authority.
+
+### Running
+
+`POST /api/backtests` executes **synchronously**, so `RUNNING` is a real state:
+the form is replaced by a textual status while the browser waits on the single
+response. There is no progress percentage (the server sends none) and no
+Cancel (the backend supports none), and the request is never retried.
+
+### COMPLETED versus FAILED
+
+A `201` with `status: "FAILED"` is a **successfully created run**, not an HTTP
+failure — the row exists and is saved. It shows the run id, generated name,
+status, and the persisted `error_message`, with no fabricated metrics, and
+offers to edit the configuration with the submitted values still in place.
+
+A `201` with `status: "COMPLETED"` shows the run id, name, timestamps, and only
+those headline figures already present in the response. No result series is
+fetched and nothing is charted.
+
+Either way the URL becomes `/backtest/new?backtest_id={id}` — only the id, never
+the configuration or any metric. Reloading that URL loads
+`GET /api/backtests/{id}` (with no `include`, so no trade or equity series),
+confirms ownership through the backend's indistinguishable 404, and renders the
+same handoff **without re-running the engine**.
+
+A non-2xx response is different: the flow stays on `STRATEGY_CONFIG` with every
+entered value preserved, shows the safe backend message, and maps
+`details.field` onto the offending input. Grid-related codes such as
+`INVALID_ZONE_CONFIG` and `GRID_TOO_DENSE` also appear beside the grid section.
+A `DATASET_NOT_FOUND` explains the dataset may have been deleted and links to
+`/datasets` without revealing whether a foreign dataset exists.
+
 ## Verification
 
 ```powershell
@@ -235,7 +303,8 @@ frontend/
 
 ## Not implemented yet
 
-Strategy configuration and backtest execution (the wizard stops at
-`DATASET_SAVED`), backtest history, the result dashboard, charts, comparison,
-export download buttons, optimization, and in-browser PDF rendering. There is
-no end-to-end browser suite, and no deployment or Docker setup.
+The detailed result dashboard, backtest history (`/history`), equity and
+drawdown charts, the trade table, run comparison, rerun/duplicate controls,
+export download buttons, optimization, and in-browser PDF rendering. The run
+handoff shows only the summary the create/detail response already contains.
+There is no end-to-end browser suite, and no deployment or Docker setup.

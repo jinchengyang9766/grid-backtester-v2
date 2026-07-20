@@ -13,6 +13,7 @@ export function WizardProgress({ step }: { step: WizardStep }) {
       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
         Step {currentIndex + 1} of {VISIBLE_STEPS.length}: {current.label}
         {step === "DETECTING" && " — reading file"}
+        {step === "RUNNING" && " — running backtest"}
       </p>
       <ol className="mt-2 flex flex-wrap gap-1.5">
         {VISIBLE_STEPS.map((entry, index) => {

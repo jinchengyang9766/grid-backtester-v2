@@ -441,7 +441,7 @@ describe("existing dataset handoff", () => {
     expect(callsTo("/api/datasets/7")).toHaveLength(1);
   });
 
-  it("renders no strategy form", async () => {
+  it("opens the strategy form from the saved handoff", async () => {
     queueResponse("/api/datasets/7", () => jsonResponse(detail()));
     render(
       <AuthProvider>
@@ -450,10 +450,12 @@ describe("existing dataset handoff", () => {
     );
     await screen.findByText("Dataset saved");
 
-    expect(screen.getByRole("button", { name: "Configure strategy" })).toBeDisabled();
-    expect(screen.queryByLabelText(/initial cash/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/grid step/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/baseline/i)).not.toBeInTheDocument();
+    // The form is not rendered until the user asks for it.
+    expect(screen.queryByLabelText("Initial cash")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Configure strategy" }));
+    expect(await screen.findByLabelText("Initial cash")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run backtest" })).toBeInTheDocument();
   });
 
   it("shows the safe backend message for a missing or unowned dataset", async () => {
