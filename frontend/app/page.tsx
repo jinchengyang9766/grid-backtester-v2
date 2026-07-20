@@ -37,7 +37,7 @@ export default function LandingPage() {
           <LoadingState label="Checking your session…" />
         ) : state.status === "authenticated" ? (
           <div className="flex flex-wrap items-center gap-3">
-            <Link href="/app" className={LINK_PRIMARY}>
+            <Link href="/history" className={LINK_PRIMARY}>
               Open workspace
             </Link>
             <span className="text-sm text-slate-600 dark:text-slate-400">

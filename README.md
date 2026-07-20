@@ -48,18 +48,22 @@ grid-backtester-v2/
   four export endpoints (`trades.csv`, `equity.csv`, `result.json`,
   `report.pdf`) are implemented and tested. See
   [`backend/README.md`](backend/README.md) for the endpoint-level detail.
-- **Frontend: authentication, datasets, and backtest execution.** A Next.js App
-  Router application with TypeScript, Tailwind CSS, a same-origin `/api` proxy,
-  and a typed API client. Implemented pages: `/` (public landing), `/login`,
-  `/register`, `/app` (authenticated shell), `/datasets` (list, detail,
-  delete), and `/backtest/new`, which runs the full SPEC Section 28 wizard:
-  upload → column mapping → cleaning review → cleaned preview → dataset saved →
-  strategy configuration → running → result handoff. Financial values are
-  handled as exact decimal strings and never converted through floating point;
+- **Frontend: complete through the result dashboard.** A Next.js App Router
+  application with TypeScript, Tailwind CSS, a same-origin `/api` proxy, and a
+  typed API client. Implemented pages: `/` (public landing), `/login`,
+  `/register`, `/history` (the authenticated landing — searchable, filterable,
+  paginated backtest history), `/history/{id}` (the full persisted-result
+  dashboard with metrics, configuration, dependency-free SVG equity/drawdown/
+  price charts, and all four result tables), `/history/compare` (side-by-side
+  stored metrics), `/datasets` (list, detail, delete), and `/backtest/new`,
+  which runs the full SPEC Section 28 wizard from upload through strategy
+  configuration to execution. Runs can be renamed, rerun, duplicated with
+  edited settings, deleted, and compared. Financial values are handled as exact
+  decimal strings and converted to numbers only at the SVG-coordinate boundary;
   uploaded files and preview tokens stay in memory only.
-- **Not yet implemented:** the detailed result dashboard, backtest history,
-  charts, run comparison, export download buttons, optimization (backend and
-  frontend), Celery/Redis, and Docker.
+- **Not yet implemented:** export download buttons (the backend export
+  endpoints exist), optimization (backend and frontend), Celery/Redis, and
+  Docker.
 
 See `docs/SPEC.md` Section 40 for the full implementation phase order.
 

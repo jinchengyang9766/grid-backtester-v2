@@ -9,8 +9,11 @@
 
 export const NEXT_PARAM = "next";
 
-/** Where an authenticated user lands when no explicit target is given. */
-export const DEFAULT_AUTHENTICATED_PATH = "/app";
+/**
+ * Where an authenticated user lands when no explicit target is given.
+ * SPEC Section 27 places this at /history, which now exists.
+ */
+export const DEFAULT_AUTHENTICATED_PATH = "/history";
 
 export function isSafeNextPath(value: string | null | undefined): value is string {
   if (!value) return false;

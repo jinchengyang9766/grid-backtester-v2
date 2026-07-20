@@ -1,6 +1,6 @@
 "use client";
 
-import type { DatasetDetail } from "@/lib/api/dataset-types";
+import type { StrategyDatasetSummary } from "@/lib/backtests/configuration-state";
 
 /**
  * RUNNING (SPEC Section 28).
@@ -10,7 +10,7 @@ import type { DatasetDetail } from "@/lib/api/dataset-types";
  * fabricated bar would imply information the server never sent. There is also
  * no Cancel, because the backend exposes no cancellation for a backtest.
  */
-export function RunningStep({ dataset }: { dataset: DatasetDetail }) {
+export function RunningStep({ dataset }: { dataset: StrategyDatasetSummary }) {
   return (
     <section
       aria-labelledby="running-heading"

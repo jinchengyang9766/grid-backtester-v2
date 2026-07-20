@@ -76,6 +76,8 @@ describe("scope of this slice", () => {
     const names = apiModules.map((file) => relative(ROOT, file).replace(/\\/g, "/"));
     expect(names.sort()).toEqual([
       "lib/api/auth.ts",
+      "lib/api/backtest-history-types.ts",
+      "lib/api/backtest-history.ts",
       "lib/api/backtest-types.ts",
       "lib/api/backtests.ts",
       "lib/api/client.ts",
@@ -86,19 +88,21 @@ describe("scope of this slice", () => {
     ]);
   });
 
-  it("calls no optimization endpoint and no backtest sub-resource", () => {
+  it("calls no optimization or export endpoint", () => {
     for (const file of FILES) {
       const source = code(file);
       const name = relative(ROOT, file);
       expect(source, name).not.toMatch(/["'`]\/api\/optimizations/);
-      // Creation and single-run detail only: history listing, compare,
-      // rerun, duplicate, and exports all belong to later tasks.
-      expect(source, name).not.toMatch(/\/rerun/);
-      expect(source, name).not.toMatch(/\/duplicate/);
-      expect(source, name).not.toMatch(/\/api\/backtests\/compare/);
+      // Export download controls belong to a later task.
       expect(source, name).not.toMatch(/\/exports\//);
-      // No result-series include is ever requested.
-      expect(source, name).not.toMatch(/include=.*(trades|daily_equity|event_equity)/);
+      expect(source, name).not.toMatch(/trades\.csv|equity\.csv|result\.json|report\.pdf/);
+    }
+  });
+
+  it("never requests raw price bars", () => {
+    for (const file of FILES) {
+      const source = code(file);
+      expect(source, relative(ROOT, file)).not.toMatch(/price_bars|priceBars/);
     }
   });
 
@@ -116,20 +120,45 @@ describe("scope of this slice", () => {
     }
   });
 
-  it("never converts a financial value through floating point", () => {
+  it("converts a financial value to a number only in the chart adapter", () => {
+    // The one module allowed to convert, and only to obtain SVG coordinates.
+    const ADAPTER = join("lib", "backtests", "chart-data.ts");
+
     const financial = FILES.filter(
       (file) =>
         file.includes(join("lib", "backtests")) ||
-        file.includes(join("components", "backtests")),
+        file.includes(join("components", "backtests")) ||
+        file.includes(join("components", "results")),
     );
     expect(financial.length).toBeGreaterThan(0);
+
     for (const file of financial) {
+      if (file.endsWith(ADAPTER)) continue;
       const source = code(file);
       const name = relative(ROOT, file);
       expect(source, name).not.toMatch(/parseFloat|Number\.parseFloat/);
       expect(source, name).not.toMatch(/toFixed\(/);
       // Number(...) as a conversion; Number.isSafeInteger etc. are fine.
       expect(source, name).not.toMatch(/[^.\w]Number\(/);
+    }
+
+    const adapter = code(join(ROOT, ADAPTER));
+    expect(adapter).toMatch(/Number\(value\)/);
+    expect(adapter).not.toMatch(/parseFloat/);
+  });
+
+  it("keeps chart geometry out of the metric and table modules", () => {
+    // Only the chart components may import the coordinate adapter.
+    for (const file of FILES) {
+      if (file.includes(join("components", "charts"))) continue;
+      if (file.endsWith(join("lib", "backtests", "chart-data.ts"))) continue;
+      const source = code(file);
+      const name = relative(ROOT, file);
+      if (source.includes("chart-data")) {
+        // Chart wrappers live under components/charts; anything else that
+        // reaches for the adapter would be converting outside the boundary.
+        expect(name, name).toMatch(/charts|history|results/);
+      }
     }
   });
 
@@ -234,14 +263,19 @@ describe("upload and token handling", () => {
     }
   });
 
-  it("builds no history, result, export, or optimization page", () => {
-    const routes = FILES.filter((file) => file.endsWith(`${join("", "page.tsx")}`)).map((file) =>
-      relative(ROOT, file).replace(/\\/g, "/"),
+  it("builds no export or optimization page", () => {
+    // Route files only: basename exactly "page.tsx" under app/. A component
+    // merely named "...-page.tsx" is not a route.
+    const routes = FILES.map((file) => relative(ROOT, file).replace(/\\/g, "/")).filter(
+      (path) => path.startsWith("app/") && path.endsWith("/page.tsx"),
     );
     expect(routes.sort()).toEqual([
       "app/app/page.tsx",
       "app/backtest/new/page.tsx",
       "app/datasets/page.tsx",
+      "app/history/[backtestId]/page.tsx",
+      "app/history/compare/page.tsx",
+      "app/history/page.tsx",
       "app/login/page.tsx",
       "app/page.tsx",
       "app/register/page.tsx",

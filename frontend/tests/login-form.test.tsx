@@ -85,7 +85,7 @@ describe("submission", () => {
     await userEvent.type(screen.getByLabelText("Password"), "secret123");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/history"));
     const [, init] = loginCalls()[0];
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({
       email: "a@b.c",
@@ -114,7 +114,7 @@ describe("submission", () => {
     await userEvent.type(screen.getByLabelText("Password"), "secret123");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/history"));
   });
 
   it("submits with the Enter key", async () => {
@@ -124,7 +124,7 @@ describe("submission", () => {
     await userEvent.type(screen.getByLabelText("Email"), "a@b.c");
     await userEvent.type(screen.getByLabelText("Password"), "secret123{Enter}");
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/history"));
   });
 
   it("shows the backend's generic message for invalid credentials", async () => {

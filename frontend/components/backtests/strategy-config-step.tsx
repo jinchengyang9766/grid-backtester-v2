@@ -11,16 +11,16 @@ import { TickSizeInput } from "@/components/backtests/fields/tick-size-input";
 import { StrategySummary } from "@/components/backtests/strategy-summary";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import type { DatasetDetail } from "@/lib/api/dataset-types";
 import {
   cloneCommission,
   type ConfigurationFormState,
+  type StrategyDatasetSummary,
 } from "@/lib/backtests/configuration-state";
 import type { FieldErrors } from "@/lib/backtests/configuration-validation";
 import { dataModeLabel, dateRangeLabel, displayText } from "@/lib/datasets/display";
 
 export interface StrategyConfigStepProps {
-  dataset: DatasetDetail;
+  dataset: StrategyDatasetSummary;
   configuration: ConfigurationFormState;
   errors: FieldErrors;
   /** Top-level backend message, e.g. a 422 configuration rejection. */
@@ -32,6 +32,12 @@ export interface StrategyConfigStepProps {
   onChange: (configuration: ConfigurationFormState) => void;
   onReset: () => void;
   onSubmit: () => void;
+  /** Overridden when the form is reused inside the duplicate dialog. */
+  heading?: string;
+  submitLabel?: string;
+  submitPendingLabel?: string;
+  startingValuesNote?: string;
+  showBackLink?: boolean;
 }
 
 function Section({
@@ -65,6 +71,11 @@ export function StrategyConfigStep({
   onChange,
   onReset,
   onSubmit,
+  heading = "Configure strategy",
+  submitLabel = "Run backtest",
+  submitPendingLabel = "Running backtest…",
+  startingValuesNote = "The values below are starting values taken from the specification's example configuration, not recommendations. Review every section before running.",
+  showBackLink = true,
 }: StrategyConfigStepProps) {
   const update = (patch: Partial<ConfigurationFormState>) =>
     onChange({ ...configuration, ...patch });
@@ -79,7 +90,7 @@ export function StrategyConfigStep({
       noValidate
     >
       <div>
-        <h2 className="text-lg font-semibold">Configure strategy</h2>
+        <h2 className="text-lg font-semibold">{heading}</h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Running uses{" "}
           <span className="font-medium break-words">{dataset.name}</span> —{" "}
@@ -115,8 +126,7 @@ export function StrategyConfigStep({
       )}
 
       <p className="text-xs text-slate-600 dark:text-slate-400">
-        The values below are starting values taken from the specification&apos;s example
-        configuration, not recommendations. Review every section before running.
+        {startingValuesNote}
       </p>
 
       <Section
@@ -297,18 +307,20 @@ export function StrategyConfigStep({
       <StrategySummary dataset={dataset} configuration={configuration} />
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" pending={pending} pendingLabel="Running backtest…">
-          Run backtest
+        <Button type="submit" pending={pending} pendingLabel={submitPendingLabel}>
+          {submitLabel}
         </Button>
         <Button variant="secondary" onClick={onReset} disabled={pending}>
           Reset to defaults
         </Button>
-        <Link
-          href="/datasets"
-          className="inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          Back to datasets
-        </Link>
+        {showBackLink && (
+          <Link
+            href="/datasets"
+            className="inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Back to datasets
+          </Link>
+        )}
       </div>
     </form>
   );

@@ -19,6 +19,24 @@ import type {
   ValueMode,
 } from "@/lib/api/backtest-types";
 
+/**
+ * The dataset facts the strategy form needs.
+ *
+ * Narrower than `DatasetDetail` on purpose, so the same form serves both the
+ * create flow (which loads a full dataset) and duplicate (which only has the
+ * summary embedded in a backtest detail).
+ */
+export interface StrategyDatasetSummary {
+  id: number;
+  name: string;
+  security_name: string | null;
+  security_code: string | null;
+  data_mode: string;
+  start_date: string;
+  end_date: string;
+  row_count: number;
+}
+
 export interface ValueFormState {
   mode: ValueMode;
   value: string;

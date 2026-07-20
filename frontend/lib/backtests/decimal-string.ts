@@ -145,3 +145,28 @@ export function trimTrailingZeros(value: string): string {
   if (!value.includes(".")) return value;
   return value.replace(/\.?0+$/, "") || "0";
 }
+
+/**
+ * Cut a decimal string to at most `places` fractional digits, by truncation.
+ *
+ * Pure string surgery — no rounding and no float. Truncating rather than
+ * rounding avoids implying a precision the shortened text does not have, and
+ * the caller always shows the exact stored value alongside. `truncated` says
+ * whether anything was dropped, so the UI can mark the value approximate.
+ */
+export function truncateDecimal(
+  value: string,
+  places: number,
+): { text: string; truncated: boolean } {
+  if (!isDecimalString(value)) return { text: value, truncated: false };
+  const pointIndex = value.indexOf(".");
+  if (pointIndex === -1) return { text: value, truncated: false };
+
+  const fraction = value.slice(pointIndex + 1);
+  if (fraction.length <= places) return { text: value, truncated: false };
+
+  const kept = fraction.slice(0, places);
+  const whole = value.slice(0, pointIndex);
+  const text = places === 0 ? whole : `${whole}.${kept}`;
+  return { text, truncated: true };
+}

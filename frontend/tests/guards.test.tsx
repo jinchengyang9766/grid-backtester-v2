@@ -50,7 +50,7 @@ describe("next-path safety", () => {
     undefined,
   ])("rejects unsafe target %s", (path) => {
     expect(isSafeNextPath(path)).toBe(false);
-    expect(resolveNextPath(path)).toBe("/app");
+    expect(resolveNextPath(path)).toBe("/history");
   });
 
   it("builds a login path carrying the original location", () => {
@@ -149,7 +149,7 @@ describe("GuestGuard", () => {
       </AuthProvider>,
     );
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/history"));
     expect(screen.queryByText("sign-in form")).not.toBeInTheDocument();
   });
 

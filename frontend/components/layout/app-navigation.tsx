@@ -3,21 +3,16 @@
 /**
  * Workspace navigation.
  *
- * Implemented destinations are real links; Backtest History has no page yet,
- * so it renders as a disabled label rather than a link that would 404.
+ * Every destination here is implemented, so all three are real links.
  */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const SECTIONS = [
-  { href: "/app", label: "Workspace", description: "Account overview" },
+  { href: "/history", label: "History", description: "Review and compare past runs" },
   { href: "/datasets", label: "Datasets", description: "Manage saved price data" },
   { href: "/backtest/new", label: "New Backtest", description: "Import data and configure a run" },
-] as const;
-
-const PENDING_SECTIONS = [
-  { label: "Backtest History", description: "Review and compare past runs" },
 ] as const;
 
 export function AppNavigation() {
@@ -58,27 +53,6 @@ export function AppNavigation() {
             </li>
           );
         })}
-
-        {PENDING_SECTIONS.map((section) => (
-          <li key={section.label}>
-            <div
-              className="rounded-md border border-dashed border-slate-300 px-3 py-2.5 dark:border-slate-700"
-              aria-disabled="true"
-            >
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  {section.label}
-                </span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  Not available yet
-                </span>
-              </div>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                {section.description}
-              </p>
-            </div>
-          </li>
-        ))}
       </ul>
     </nav>
   );

@@ -1,8 +1,9 @@
 # Grid Backtester V2 — frontend
 
-Next.js (App Router) + React + TypeScript + Tailwind CSS. This slice is the
-application foundation and the complete authentication experience; dataset,
-backtest, chart, export, and optimization pages are **not** implemented yet.
+Next.js (App Router) + React + TypeScript + Tailwind CSS. Authentication,
+dataset management, backtest configuration and execution, history, and the
+persisted-result dashboard are implemented. Export download controls and
+optimization are **not** implemented yet.
 
 ## Requirements
 
@@ -104,25 +105,23 @@ never fire while the session is still unknown.
 | Route | Purpose | Auth |
 |---|---|---|
 | `/` | Public landing page (SPEC Section 27) | No |
-| `/login` | Sign-in form; honours `?next=<path>` | No — signed-in visitors go to `/app` |
-| `/register` | Registration form | No — signed-in visitors go to `/app` |
-| `/app` | Authenticated workspace shell | Yes |
+| `/login` | Sign-in form; honours `?next=<path>` | No — signed-in visitors go to `/history` |
+| `/register` | Registration form | No — signed-in visitors go to `/history` |
+| `/history` | Backtest history — the authenticated landing | Yes |
+| `/history/{id}` | Full persisted result dashboard | Yes |
+| `/history/compare?ids=…` | Side-by-side stored metrics | Yes |
 | `/datasets` | Dataset list, detail, and delete | Yes |
-| `/backtest/new` | Dataset upload wizard | Yes |
+| `/backtest/new` | Upload wizard, strategy, and run | Yes |
+| `/app` | Legacy alias; redirects to `/history` | Yes |
 
-Unauthenticated access to `/app` redirects to `/login?next=%2Fapp`, and signing
-in returns the user there. Only same-origin relative paths are accepted as a
-`next` target, so the parameter cannot be used as an open redirect.
+Unauthenticated access to a protected route redirects to
+`/login?next=<encoded path>`, and signing in returns the user there. Only
+same-origin relative paths are accepted as a `next` target, so the parameter
+cannot be used as an open redirect. With no explicit target, signing in lands
+on `/history` (SPEC Section 27).
 
-`/app` is a **foundation placeholder**. It shows real session information (the
-signed-in email) and a navigation outline whose Datasets / New Backtest /
-Backtest History entries are rendered as disabled labels marked "Not available
-yet" — never as links to routes that do not exist. No dataset counts, backtest
-results, charts, or sample figures are displayed.
-
-> `/app` is a temporary home. SPEC Section 27 places the authenticated landing
-> at `/history`; that route arrives with the backtest history page, at which
-> point the redirect targets move there.
+`/app` was the temporary home before `/history` existed. It is kept only so
+old links keep working and immediately replaces itself with `/history`.
 
 ## Datasets
 
@@ -270,6 +269,79 @@ entered value preserved, shows the safe backend message, and maps
 A `DATASET_NOT_FOUND` explains the dataset may have been deleted and links to
 `/datasets` without revealing whether a foreign dataset exists.
 
+## History and results
+
+`/history` is the authenticated landing (SPEC Section 27). It lists every owned
+run newest-first, exactly in the order the backend returns.
+
+- **Filters** — name search, dataset, and status, using the backend's own
+  `search` / `dataset_id` / `status` parameters. Typing is debounced locally and
+  superseded requests are aborted; nothing is retried. Filters and page live in
+  the query string, so browser back/forward restores them, and only filter
+  values and identifiers ever appear there.
+- **Pagination** — `limit`/`offset`, with the total count shown and the controls
+  disabled at each boundary. Changing a filter resets to page one.
+- **Per-run actions** — view, rename, rerun, duplicate, delete, and select for
+  comparison. They stay available on FAILED runs too, since those are valid
+  history entries.
+
+### Result dashboard (`/history/{id}`)
+
+The detail is requested once with `include=trades,zone_events,daily_equity,event_equity`
+and presented in tabs: overview, charts, benchmarks, costs & zones,
+configuration, and the four result tables.
+
+Every figure is read from the stored `result_metrics` document — nothing is
+recomputed, averaged, or derived from the series, because a second calculation
+in the browser could disagree with what the engine actually produced. Decimal
+strings are shown exactly as stored; a ratio additionally gets a short
+percentage hint, produced by shifting digits and marked `≈` when truncated so
+it is never mistaken for the value. Missing metrics render as a dash and are
+never inferred.
+
+A **FAILED** run shows its persisted `error_message`, states that no metrics
+were stored, and fabricates no charts. **PENDING**/**RUNNING** runs report their
+status without inventing progress; nothing is polled.
+
+### Charts
+
+Three SVG charts are drawn with local components — no charting dependency:
+
+- **Equity** — `DailyEquity.equity` with both persisted benchmark point series
+  from `result_metrics.benchmark1/2.points[]`, on the same absolute axis. No
+  rebasing, normalization, or smoothing.
+- **Drawdown** — `DailyEquity.drawdown` read directly, with a zero reference
+  line and negatives preserved. Running peaks are never recalculated.
+- **Price and grid** — `DailyEquity.close` with the persisted baseline, A/C
+  boundaries, and only those grid levels actually stored. `price_bars` is never
+  requested and no level is synthesized; when none were stored the chart says so.
+
+`lib/backtests/chart-data.ts` is the **only** module that converts a decimal
+string to a JavaScript number, and the result is used solely for SVG
+coordinates. Labels, tooltips, and every table cell keep the original strings.
+Empty, single-point, flat, and all-zero series all render safely.
+
+### Rename, delete, rerun, duplicate, compare
+
+- **Rename** sends only `{ name }`; any other field would be a deliberate
+  `422 IMMUTABLE_FIELD`.
+- **Delete** removes the run and its stored result rows after a `204` — never
+  optimistically. The dataset and its price data are untouched.
+- **Rerun** re-executes the stored configuration against the dataset's current
+  bars, creating a new run and leaving the source unchanged. Both COMPLETED and
+  FAILED results open the new run's detail page.
+- **Duplicate** opens the strategy form prefilled from the source run's exact
+  configuration and submits the whole edited document as
+  `configuration_overrides`; the backend validates the merged result through the
+  same full-configuration model. The source dataset is fixed and the source run
+  is never modified.
+- **Compare** posts the selected ids to `/api/backtests/compare` and renders the
+  response verbatim, one column per run in the requested order. No ranking,
+  winner, difference, or percentage change is calculated. A missing or foreign
+  id produces the all-or-nothing 404 without revealing which id failed.
+  Selection is limited to the visible page and is cleared, with an accessible
+  notice, when filters or page change.
+
 ## Verification
 
 ```powershell
@@ -303,8 +375,6 @@ frontend/
 
 ## Not implemented yet
 
-The detailed result dashboard, backtest history (`/history`), equity and
-drawdown charts, the trade table, run comparison, rerun/duplicate controls,
-export download buttons, optimization, and in-browser PDF rendering. The run
-handoff shows only the summary the create/detail response already contains.
-There is no end-to-end browser suite, and no deployment or Docker setup.
+Export download controls (`trades.csv`, `equity.csv`, `result.json`,
+`report.pdf`), in-browser PDF rendering, and optimization. There is no
+end-to-end browser suite, and no deployment or Docker setup.

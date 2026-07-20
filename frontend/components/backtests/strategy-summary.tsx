@@ -1,7 +1,9 @@
 "use client";
 
-import type { DatasetDetail } from "@/lib/api/dataset-types";
-import type { ConfigurationFormState } from "@/lib/backtests/configuration-state";
+import type {
+  ConfigurationFormState,
+  StrategyDatasetSummary,
+} from "@/lib/backtests/configuration-state";
 import { PATH_MODE_LABELS, rateLabel, valueLabel } from "@/lib/backtests/display";
 import { dataModeLabel, dateRangeLabel, displayText } from "@/lib/datasets/display";
 import type { CommissionFormState } from "@/lib/backtests/configuration-state";
@@ -29,7 +31,7 @@ export function StrategySummary({
   dataset,
   configuration,
 }: {
-  dataset: DatasetDetail;
+  dataset: StrategyDatasetSummary;
   configuration: ConfigurationFormState;
 }) {
   const baseline = configuration.baseline.trim();

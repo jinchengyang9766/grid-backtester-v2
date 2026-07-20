@@ -1,35 +1,25 @@
 "use client";
 
 /**
- * Authenticated workspace overview.
+ * `/app` is the legacy authenticated home from before `/history` existed
+ * (SPEC Section 27 places the landing at `/history`). It is kept only so old
+ * links and bookmarks still work, and immediately replaces itself.
  *
- * A foundation placeholder: it shows only real session information. No
- * dataset counts, backtest summaries, or sample figures are invented, because
- * fabricated financial numbers in a backtesting tool are actively misleading.
+ * The redirect runs inside the guard, so it never fires before the session
+ * has resolved and it cannot expose anything private on the way through.
  */
 
-import { AppNavigation } from "@/components/layout/app-navigation";
-import { useAuth } from "@/lib/auth/use-auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function WorkspacePage() {
-  const { user } = useAuth();
+import { LoadingState } from "@/components/ui/loading-state";
 
-  return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Workspace</h1>
-      <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-        Your workspace is ready
-        {user ? (
-          <>
-            , <span className="font-medium">{user.email}</span>
-          </>
-        ) : null}
-        . Dataset import and backtesting arrive in the next steps.
-      </p>
+export default function LegacyWorkspacePage() {
+  const router = useRouter();
 
-      <div className="mt-8 max-w-md">
-        <AppNavigation />
-      </div>
-    </main>
-  );
+  useEffect(() => {
+    router.replace("/history");
+  }, [router]);
+
+  return <LoadingState fullPage label="Taking you to your backtest history…" />;
 }

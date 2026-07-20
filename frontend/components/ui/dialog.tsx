@@ -36,6 +36,15 @@ export function Dialog({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
+  // Callers commonly pass a fresh `onClose` each render. Holding it in a ref
+  // keeps the effects below keyed only on `open`, so a re-render (for example
+  // on every keystroke in a dialog input) cannot re-run the focus logic and
+  // yank focus away from what the user is typing in.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -50,7 +59,7 @@ export function Dialog({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -77,7 +86,7 @@ export function Dialog({
       // Return focus to whatever opened the dialog.
       previouslyFocused.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
