@@ -9,9 +9,13 @@
  * so rather than showing invented figures.
  */
 
+import { BenchmarkComparisonChart } from "@/components/charts/benchmark-comparison-chart";
 import { DrawdownChart } from "@/components/charts/drawdown-chart";
 import { EquityChart } from "@/components/charts/equity-chart";
+import { NormalizedPerformanceChart } from "@/components/charts/normalized-performance-chart";
 import { PriceGridChart } from "@/components/charts/price-grid-chart";
+import { PriceTradesChart } from "@/components/charts/price-trades-chart";
+import { TradeActivityChart } from "@/components/charts/trade-activity-chart";
 import { ConfigurationSummary } from "@/components/results/configuration-summary";
 import { MetricGrid, MetricSectionBlock } from "@/components/results/metric-grid";
 import {
@@ -44,6 +48,37 @@ function MetricsUnavailable({ status }: { status: string }) {
         ? "The run did not complete, so the engine produced no metrics. The configuration and dataset it attempted are shown below."
         : "This run has not produced results yet. Its configuration and dataset are shown below."}
     </Alert>
+  );
+}
+
+/**
+ * One titled band of related charts.
+ *
+ * Each band is a labelled section, so the charts tab is a short list of
+ * landmarks a screen reader or keyboard user can move between rather than one
+ * undifferentiated wall of figures.
+ */
+function ChartGroup({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="space-y-4">
+      <div className="space-y-0.5 border-b border-slate-200 pb-2 dark:border-slate-700">
+        <h3 id={id} className="text-sm font-semibold">
+          {title}
+        </h3>
+        <p className="text-xs text-slate-600 dark:text-slate-400">{description}</p>
+      </div>
+      <div className="space-y-8">{children}</div>
+    </section>
   );
 }
 
@@ -88,10 +123,43 @@ export function BacktestDashboard({ detail }: { detail: BacktestDetailWithSeries
       id: "charts",
       label: "Charts",
       render: () => (
-        <div className="space-y-8">
-          <EquityChart dailyEquity={dailyEquity} metrics={metrics} />
-          <DrawdownChart dailyEquity={dailyEquity} />
-          <PriceGridChart dailyEquity={dailyEquity} metrics={metrics} />
+        <div className="space-y-10">
+          <ChartGroup
+            id="charts-price"
+            title="Price and trades"
+            description="Where the price went, and where the engine actually bought and sold."
+          >
+            <PriceTradesChart
+              dailyEquity={dailyEquity}
+              trades={trades}
+              metrics={metrics}
+            />
+            <PriceGridChart dailyEquity={dailyEquity} metrics={metrics} />
+          </ChartGroup>
+
+          <ChartGroup
+            id="charts-performance"
+            title="Equity and performance"
+            description="How the portfolio grew, and how that compares with holding instead of trading."
+          >
+            <EquityChart dailyEquity={dailyEquity} metrics={metrics} />
+            <BenchmarkComparisonChart dailyEquity={dailyEquity} metrics={metrics} />
+            <NormalizedPerformanceChart dailyEquity={dailyEquity} metrics={metrics} />
+          </ChartGroup>
+
+          <ChartGroup
+            id="charts-risk"
+            title="Risk and activity"
+            description="How far the portfolio fell below its peak, and when it traded."
+          >
+            <DrawdownChart dailyEquity={dailyEquity} />
+            <TradeActivityChart
+              dailyEquity={dailyEquity}
+              trades={trades}
+              metrics={metrics}
+            />
+          </ChartGroup>
+
           <p className="text-xs text-slate-600 dark:text-slate-400">
             Charts are drawn from the stored result rows. The exact values are
             listed in the series tables.

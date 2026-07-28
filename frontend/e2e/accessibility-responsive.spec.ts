@@ -90,7 +90,10 @@ test.describe("responsive layout", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/history/${backtestId}`);
     await page.getByRole("tab", { name: "Charts" }).click();
-    await expect(page.getByRole("img", { name: /Equity curve/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Strategy equity curve/ })).toBeVisible();
+    // The widest additions must survive a phone viewport too.
+    await expect(page.getByRole("img", { name: /Price with buy and sell trades/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Trade activity per day/ })).toBeVisible();
 
     await expectNoHorizontalScroll(page, "charts at phone width");
   });

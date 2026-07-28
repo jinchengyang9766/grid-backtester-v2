@@ -66,12 +66,35 @@ test.describe("history and result dashboard", () => {
 
     // Charts tab, including SVG and accessible naming.
     await page.getByRole("tab", { name: "Charts" }).click();
-    const equityChart = page.getByRole("img", { name: /Equity curve/ });
+    const equityChart = page.getByRole("img", { name: /Strategy equity curve/ });
     await expect(equityChart).toBeVisible();
-    await expect(equityChart.locator("title")).toHaveText(/Equity curve/);
+    await expect(equityChart.locator("title")).toHaveText(/Strategy equity curve/);
     await expect(equityChart.locator("desc")).not.toBeEmpty();
-    await expect(page.getByRole("img", { name: /Drawdown/ })).toBeVisible();
-    await expect(page.getByRole("img", { name: /Price with baseline/ })).toBeVisible();
+
+    // Every chart the result page is required to offer.
+    for (const name of [
+      /Price with buy and sell trades/,
+      /Price with baseline/,
+      /Strategy against both benchmarks/,
+      /Normalized performance/,
+      /Drawdown/,
+      /Trade activity per day/,
+    ]) {
+      await expect(page.getByRole("img", { name })).toBeVisible();
+    }
+
+    // Grouped under labelled sections rather than stacked in one wall.
+    for (const group of ["Price and trades", "Equity and performance", "Risk and activity"]) {
+      await expect(page.getByRole("heading", { name: group })).toBeVisible();
+    }
+
+    // The trade markers are real: the fixture configuration does trade, and
+    // both sides are keyed in the legend by their own triangle.
+    const priceChart = page.getByRole("img", { name: /Price with buy and sell trades/ });
+    expect(await priceChart.locator("path[fill='#1a7f37']").count()).toBeGreaterThan(0);
+    expect(await priceChart.locator("path[fill='#b3261e']").count()).toBeGreaterThan(0);
+    await expect(page.getByText("Buy (executed)")).toBeVisible();
+    await expect(page.getByText("Sell (executed)")).toBeVisible();
 
     // Configuration tab shows exact stored values.
     await page.getByRole("tab", { name: "Configuration" }).click();

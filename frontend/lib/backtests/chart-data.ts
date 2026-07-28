@@ -76,6 +76,140 @@ export function seriesFrom<T>(
   };
 }
 
+/**
+ * Rebase a series so its first plotted point sits at `base`.
+ *
+ * This is a coordinate transform, not a metric: every point keeps the exact
+ * stored string it came from, and the stored return figures in
+ * `result_metrics` are never touched. Returns null when there is nothing to
+ * rebase against, or when the first point is zero and the ratio is undefined,
+ * so an undefined comparison is dropped rather than drawn as a flat line.
+ */
+export function rebaseSeries(series: ChartSeries, base: number): ChartSeries | null {
+  const first = series.points[0];
+  if (first === undefined || first.value === 0) return null;
+  return {
+    ...series,
+    points: series.points.map((point) => ({
+      ...point,
+      value: (point.value / first.value) * base,
+    })),
+  };
+}
+
+/** Marker glyphs are told apart by shape as well as colour. */
+export type MarkerShape = "triangle-up" | "triangle-down";
+
+export interface ChartMarker {
+  index: number;
+  value: number;
+  /** The exact stored price this marker sits at. */
+  source: string;
+  label: string;
+  /** How many identical persisted rows this one glyph stands for. */
+  count: number;
+}
+
+export interface MarkerGroup {
+  key: string;
+  label: string;
+  shape: MarkerShape;
+  color: string;
+  markers: ChartMarker[];
+}
+
+/**
+ * Build one marker group from rows carrying an x position and a price.
+ *
+ * Rows whose x position or price is missing are skipped — the caller reports
+ * how many, so nothing disappears silently. Rows that would land on exactly
+ * the same pixel (same position, same stored price) collapse into a single
+ * glyph carrying a count, which is what keeps a day with several identical
+ * fills legible instead of overprinting.
+ */
+export function markersFrom<T>(
+  rows: readonly T[],
+  options: {
+    key: string;
+    label: string;
+    shape: MarkerShape;
+    color: string;
+    index: (row: T) => number | null;
+    value: (row: T) => string | null;
+    label_: (row: T) => string;
+  },
+): { group: MarkerGroup; skipped: number } {
+  const collapsed = new Map<string, ChartMarker>();
+  let skipped = 0;
+
+  for (const row of rows) {
+    const index = options.index(row);
+    const source = options.value(row);
+    if (index === null || source === null) {
+      skipped += 1;
+      continue;
+    }
+    const value = toCoordinate(source);
+    if (value === null) {
+      skipped += 1;
+      continue;
+    }
+    const identity = `${index}|${source}`;
+    const existing = collapsed.get(identity);
+    if (existing === undefined) {
+      collapsed.set(identity, {
+        index,
+        value,
+        source,
+        label: options.label_(row),
+        count: 1,
+      });
+    } else {
+      existing.count += 1;
+    }
+  }
+
+  return {
+    group: {
+      key: options.key,
+      label: options.label,
+      shape: options.shape,
+      color: options.color,
+      markers: [...collapsed.values()],
+    },
+    skipped,
+  };
+}
+
+/** One stacked band of the activity chart; counts are indexed like the axis. */
+export interface BarSeries {
+  key: string;
+  label: string;
+  color: string;
+  /** Adds a hatch overlay, so bands differ by texture as well as colour. */
+  hatched?: boolean;
+  counts: number[];
+}
+
+/**
+ * Tally rows into per-position counts along an existing index axis.
+ *
+ * Whole rows only — nothing here touches a price, so no decimal is converted.
+ */
+export function countByIndex<T>(
+  rows: readonly T[],
+  length: number,
+  index: (row: T) => number | null,
+): number[] {
+  const counts = new Array<number>(Math.max(0, length)).fill(0);
+  for (const row of rows) {
+    const position = index(row);
+    if (position === null || position < 0 || position >= counts.length) continue;
+    counts[position] += 1;
+  }
+  return counts;
+}
+
 export interface ChartRange {
   min: number;
   max: number;
@@ -84,7 +218,7 @@ export interface ChartRange {
 }
 
 /**
- * The value range across every series plus any reference lines.
+ * The value range across every series plus any reference lines and markers.
  *
  * A flat series would give a zero-height range and divide by zero when
  * scaling, so it is padded to a visible band.
@@ -92,6 +226,7 @@ export interface ChartRange {
 export function chartRange(
   series: readonly ChartSeries[],
   references: readonly number[] = [],
+  extras: readonly number[] = [],
 ): ChartRange | null {
   const values: number[] = [];
   let count = 0;
@@ -100,6 +235,7 @@ export function chartRange(
     for (const point of entry.points) values.push(point.value);
   }
   for (const reference of references) values.push(reference);
+  for (const extra of extras) values.push(extra);
   if (values.length === 0) return null;
 
   let min = Math.min(...values);
@@ -130,6 +266,9 @@ export const SERIES_COLORS = {
   benchmark2: "#2e7d32",
   drawdown: "#c00000",
   price: "#1f4e79",
+  /** Trade sides. Shape and legend text carry the same distinction. */
+  buy: "#1a7f37",
+  sell: "#b3261e",
 } as const;
 
 /** Dash patterns pair with the colours so series remain distinguishable. */

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   chartRange,
+  countByIndex,
+  markersFrom,
+  rebaseSeries,
   seriesFrom,
   tickIndices,
   toCoordinate,
@@ -247,6 +250,125 @@ describe("chart coordinate adapter", () => {
     expect(tickIndices(420).length).toBeLessThanOrEqual(5);
     expect(tickIndices(420)[0]).toBe(0);
     expect(tickIndices(420).at(-1)).toBe(419);
+  });
+
+  it("widens the range to include marker values", () => {
+    const line = seriesFrom([{ v: "10" }, { v: "12" }], {
+      key: "s",
+      label: "S",
+      color: "#000",
+      value: (row) => row.v,
+      label_: () => "",
+    });
+    // A trade above the close line must not be clipped off the plot.
+    const range = chartRange([line], [], [40]);
+    expect(range!.max).toBeGreaterThanOrEqual(40);
+  });
+});
+
+describe("rebasing for the normalized chart", () => {
+  const build = (values: string[]) =>
+    seriesFrom(
+      values.map((v) => ({ v })),
+      { key: "s", label: "S", color: "#000", value: (row) => row.v, label_: () => "" },
+    );
+
+  it("scales every point against the first, to the given base", () => {
+    const rebased = rebaseSeries(build(["200", "220", "180"]), 100);
+    const values = rebased!.points.map((point) => point.value);
+    // Compared loosely on purpose: these are pixel coordinates, and the float
+    // residue they carry is exactly why the stored strings stay untouched.
+    expect(values[0]).toBeCloseTo(100);
+    expect(values[1]).toBeCloseTo(110);
+    expect(values[2]).toBeCloseTo(90);
+  });
+
+  it("keeps each point's exact stored string untouched", () => {
+    const rebased = rebaseSeries(build(["106390.00000000", "107771.70000000"]), 100);
+    // The transform is a coordinate, never a restatement of the value.
+    expect(rebased!.points.map((point) => point.source)).toEqual([
+      "106390.00000000",
+      "107771.70000000",
+    ]);
+  });
+
+  it("refuses a series with no first point or a zero base", () => {
+    expect(rebaseSeries(build([]), 100)).toBeNull();
+    expect(rebaseSeries(build(["0", "5"]), 100)).toBeNull();
+  });
+});
+
+describe("trade markers", () => {
+  interface Row {
+    at: number | null;
+    price: string | null;
+  }
+
+  const build = (rows: Row[]) =>
+    markersFrom(rows, {
+      key: "buys",
+      label: "Buy",
+      shape: "triangle-up" as const,
+      color: "#000",
+      index: (row) => row.at,
+      value: (row) => row.price,
+      label_: () => "2024-01-01",
+    });
+
+  it("places one marker per row at its stored price", () => {
+    const { group, skipped } = build([
+      { at: 0, price: "0.658" },
+      { at: 3, price: "0.641" },
+    ]);
+    expect(group.markers).toHaveLength(2);
+    expect(group.markers[0].source).toBe("0.658");
+    expect(group.markers[1].index).toBe(3);
+    expect(skipped).toBe(0);
+  });
+
+  it("collapses identical same-position rows into one counted glyph", () => {
+    const { group } = build([
+      { at: 2, price: "0.658" },
+      { at: 2, price: "0.658" },
+      { at: 2, price: "0.658" },
+    ]);
+    expect(group.markers).toHaveLength(1);
+    expect(group.markers[0].count).toBe(3);
+  });
+
+  it("keeps same-day rows apart when their prices differ", () => {
+    const { group } = build([
+      { at: 2, price: "0.658" },
+      { at: 2, price: "0.671" },
+    ]);
+    expect(group.markers).toHaveLength(2);
+  });
+
+  it("counts what it could not place instead of dropping it silently", () => {
+    const { group, skipped } = build([
+      { at: null, price: "0.658" },
+      { at: 1, price: null },
+      { at: 2, price: "not-a-price" },
+      { at: 3, price: "0.700" },
+    ]);
+    expect(group.markers).toHaveLength(1);
+    expect(skipped).toBe(3);
+  });
+});
+
+describe("activity tallies", () => {
+  it("counts rows into their axis positions", () => {
+    const counts = countByIndex([{ i: 0 }, { i: 2 }, { i: 2 }], 4, (row) => row.i);
+    expect(counts).toEqual([1, 0, 2, 0]);
+  });
+
+  it("ignores positions outside the axis", () => {
+    const counts = countByIndex([{ i: -1 }, { i: 9 }, { i: null }], 3, (row) => row.i);
+    expect(counts).toEqual([0, 0, 0]);
+  });
+
+  it("returns an empty tally for an empty axis", () => {
+    expect(countByIndex([{ i: 0 }], 0, (row) => row.i)).toEqual([]);
   });
 });
 

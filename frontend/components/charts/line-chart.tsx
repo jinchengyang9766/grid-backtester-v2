@@ -20,6 +20,8 @@ import {
   chartRange,
   tickIndices,
   type ChartSeries,
+  type MarkerGroup,
+  type MarkerShape,
 } from "@/lib/backtests/chart-data";
 
 export interface ReferenceLine {
@@ -38,10 +40,34 @@ export interface LineChartProps {
   /** Axis tick labels, indexed like the series points. */
   labels: readonly string[];
   referenceLines?: readonly ReferenceLine[];
+  /** Point glyphs overlaid on the lines, e.g. executed trades. */
+  markerGroups?: readonly MarkerGroup[];
   /** Formats a y-axis tick from its numeric coordinate. */
   formatValue?: (value: number) => string;
   emptyMessage?: string;
   height?: number;
+}
+
+const MARKER_SIZE = 4.5;
+
+/** A triangle centred on the point, pointing the way the side implies. */
+function markerPath(shape: MarkerShape, x: number, y: number): string {
+  const s = MARKER_SIZE;
+  const corners: [number, number][] =
+    shape === "triangle-up"
+      ? [
+          [x, y - s],
+          [x + s, y + s * 0.8],
+          [x - s, y + s * 0.8],
+        ]
+      : [
+          [x, y + s],
+          [x + s, y - s * 0.8],
+          [x - s, y - s * 0.8],
+        ];
+  return `${corners
+    .map(([px, py], position) => `${position === 0 ? "M" : "L"}${px.toFixed(2)},${py.toFixed(2)}`)
+    .join(" ")} Z`;
 }
 
 const WIDTH = 720;
@@ -65,6 +91,7 @@ export function LineChart({
   series,
   labels,
   referenceLines = [],
+  markerGroups = [],
   formatValue = defaultFormat,
   emptyMessage = "No data was recorded for this chart.",
   height = 260,
@@ -73,9 +100,11 @@ export function LineChart({
   const descriptionId = useId();
 
   const plotted = series.filter((entry) => entry.points.length > 0);
+  const drawnMarkers = markerGroups.filter((group) => group.markers.length > 0);
   const range = chartRange(
     plotted,
     referenceLines.map((line) => line.value),
+    drawnMarkers.flatMap((group) => group.markers.map((marker) => marker.value)),
   );
 
   if (plotted.length === 0 || range === null) {
@@ -203,12 +232,33 @@ export function LineChart({
             );
           })}
 
-          {xTicks.map((index) => (
+          {/* Drawn last so a trade glyph is never hidden under a line. */}
+          {drawnMarkers.map((group) => (
+            <g key={group.key}>
+              {group.markers
+                .filter((marker) => marker.index >= 0 && marker.index < range.count)
+                .map((marker) => (
+                  <path
+                    key={`${group.key}-${marker.index}-${marker.source}`}
+                    d={markerPath(group.shape, toX(marker.index), toY(marker.value))}
+                    fill={group.color}
+                    stroke="#ffffff"
+                    strokeWidth="0.6"
+                  />
+                ))}
+            </g>
+          ))}
+
+          {xTicks.map((index, position) => (
             <text
               key={`x-${index}`}
               x={toX(index)}
               y={height - 12}
-              textAnchor="middle"
+              // The end ticks sit on the plot edges, so centring them would
+              // push half of a date past the viewBox and clip it.
+              textAnchor={
+                position === 0 ? "start" : position === xTicks.length - 1 ? "end" : "middle"
+              }
               fontSize="9"
               fill="currentColor"
               className="text-slate-600 dark:text-slate-400"
@@ -220,6 +270,7 @@ export function LineChart({
       </div>
       <ChartLegend
         series={plotted}
+        markers={drawnMarkers}
         references={referenceLines
           .filter((line) => !line.faint)
           .map((line) => ({ label: line.label, color: line.color }))}

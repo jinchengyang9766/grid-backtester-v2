@@ -394,23 +394,49 @@ describe("configuration presentation", () => {
   });
 });
 
+/** Every chart the Charts tab is required to offer, by accessible name. */
+const CHART_NAMES = [
+  /Price with buy and sell trades/,
+  /Price with baseline and grid geometry/,
+  /Strategy equity curve/,
+  /Strategy against both benchmarks/,
+  /Normalized performance/,
+  /Drawdown/,
+  /Trade activity per day/,
+];
+
+function chart(name: RegExp) {
+  return screen.getByRole("img", { name });
+}
+
 describe("charts", () => {
-  it("renders the three charts with accessible names", async () => {
+  it("renders every chart with an accessible name and description", async () => {
     await renderDetail();
     await openTab("Charts");
-    expect(screen.getByRole("img", { name: /Equity curve/ })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Drawdown/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: /Price with baseline and grid geometry/ }),
-    ).toBeInTheDocument();
+    for (const name of CHART_NAMES) {
+      const figure = chart(name);
+      expect(figure, String(name)).toBeInTheDocument();
+      // role="img" alone is not enough: each must carry a <desc> too, so the
+      // chart is explained rather than just named.
+      expect(figure.querySelector("desc")?.textContent ?? "").not.toBe("");
+    }
   });
 
-  it("labels the benchmark series in the legend", async () => {
+  it("groups the charts under labelled sections", async () => {
     await renderDetail();
     await openTab("Charts");
-    expect(screen.getByText("Strategy equity")).toBeInTheDocument();
-    expect(screen.getByText(/Benchmark 1 \(hold initial portfolio\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Benchmark 2 \(invest cash on day one\)/)).toBeInTheDocument();
+    for (const heading of ["Price and trades", "Equity and performance", "Risk and activity"]) {
+      expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+    }
+  });
+
+  it("labels the benchmark series in every multi-series legend", async () => {
+    await renderDetail();
+    await openTab("Charts");
+    // Present in both the absolute and the normalized comparison.
+    expect(screen.getAllByText(/Benchmark 1 \(hold initial portfolio\)/)).toHaveLength(2);
+    expect(screen.getAllByText(/Benchmark 2 \(invest cash on day one\)/)).toHaveLength(2);
+    expect(screen.getAllByText("Strategy equity").length).toBeGreaterThan(0);
   });
 
   it("reports the deepest drawdown using the stored string", async () => {
@@ -431,11 +457,13 @@ describe("charts", () => {
     expect(screen.getByText(/stored no individual grid levels/)).toBeInTheDocument();
   });
 
-  it("shows empty chart states when there is no series", async () => {
-    await renderDetail({ daily_equity: [], result_metrics: null });
+  it("quotes stored equity figures rather than deriving them", async () => {
+    await renderDetail();
     await openTab("Charts");
-    expect(screen.getByText(/no stored daily equity or benchmark series/i)).toBeInTheDocument();
-    expect(screen.getByText(/no stored drawdown series/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stored initial equity/)).toBeInTheDocument();
+    // The exact stored strings, not a rounded or recomputed pair.
+    expect(screen.getAllByText("106580.00000000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("107771.70000000").length).toBeGreaterThan(0);
   });
 
   it("renders a single-point series safely", async () => {
@@ -454,7 +482,210 @@ describe("charts", () => {
       ],
     });
     await openTab("Charts");
-    expect(screen.getByRole("img", { name: /Equity curve/ })).toBeInTheDocument();
+    expect(chart(/Strategy equity curve/)).toBeInTheDocument();
+    expect(chart(/Price with buy and sell trades/)).toBeInTheDocument();
+  });
+});
+
+function executedTrade(overrides: Record<string, unknown>) {
+  return {
+    id: 1,
+    date: "2024-07-23",
+    event_sequence: 1,
+    side: "BUY",
+    grid_price: "0.65900000",
+    execution_price: "0.65800000",
+    shares: 100,
+    notional: "65.80000000",
+    commission: "5.00000000",
+    slippage_cost: "0.10000000",
+    cash_after: "99725.20000000",
+    shares_after: 9500,
+    equity_after: "106584.90000000",
+    status: "EXECUTED",
+    skip_reason: null,
+    ...overrides,
+  };
+}
+
+describe("trade markers", () => {
+  it("marks executed buys and sells distinctly in the legend", async () => {
+    await renderDetail({
+      trades: [
+        executedTrade({ id: 1, side: "BUY", date: "2024-07-23" }),
+        executedTrade({ id: 2, side: "SELL", date: "2024-07-24", event_sequence: 2 }),
+      ],
+    });
+    await openTab("Charts");
+
+    // Two legend keys, each drawn as the triangle the chart itself uses, so
+    // the sides are told apart by shape and not by colour alone.
+    expect(screen.getByText("Buy (executed)")).toBeInTheDocument();
+    expect(screen.getByText("Sell (executed)")).toBeInTheDocument();
+    expect(screen.getByText(/1 buy and 1 sell marker/)).toBeInTheDocument();
+  });
+
+  it("keys only the sides it actually drew", async () => {
+    // The fixture's only executed trade is a sell; a buy glyph appears
+    // nowhere, so keying one would describe notation the chart never used.
+    await renderDetail();
+    await openTab("Charts");
+    expect(screen.getByText("Sell (executed)")).toBeInTheDocument();
+    expect(screen.queryByText("Buy (executed)")).not.toBeInTheDocument();
+  });
+
+  it("plots one marker per executed trade and no marker for a skipped one", async () => {
+    await renderDetail();
+    await openTab("Charts");
+    // The fixture holds one executed SELL and one SKIPPED BUY.
+    expect(screen.getByText(/0 buy and 1 sell marker/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 trade\(s\) are not drawn because they were skipped/),
+    ).toBeInTheDocument();
+  });
+
+  it("collapses same-day, same-price trades into one counted marker", async () => {
+    const repeated = Array.from({ length: 3 }, (_, index) => ({
+      id: index + 1,
+      date: "2024-07-23",
+      event_sequence: index + 1,
+      side: "BUY",
+      grid_price: "0.65900000",
+      execution_price: "0.65800000",
+      shares: 100,
+      notional: "65.80000000",
+      commission: "5.00000000",
+      slippage_cost: "0.10000000",
+      cash_after: "99725.20000000",
+      shares_after: 9500,
+      equity_after: "106584.90000000",
+      status: "EXECUTED",
+      skip_reason: null,
+    }));
+    await renderDetail({ trades: repeated });
+    await openTab("Charts");
+    expect(screen.getByText(/1 buy and 0 sell marker/)).toBeInTheDocument();
+    expect(screen.getByText(/sharing a date and price share one marker/)).toBeInTheDocument();
+  });
+
+  it("does not plot a trade whose date is outside the daily series", async () => {
+    await renderDetail({
+      trades: [
+        {
+          id: 1,
+          date: "2030-01-01",
+          event_sequence: 1,
+          side: "BUY",
+          grid_price: "0.65900000",
+          execution_price: "0.65800000",
+          shares: 100,
+          notional: "65.80000000",
+          commission: "5.00000000",
+          slippage_cost: "0.10000000",
+          cash_after: "99725.20000000",
+          shares_after: 9500,
+          equity_after: "106584.90000000",
+          status: "EXECUTED",
+          skip_reason: null,
+        },
+      ],
+    });
+    await openTab("Charts");
+    expect(screen.getByText(/No executed trade could be placed/)).toBeInTheDocument();
+    expect(screen.getByText(/fell outside the daily series/)).toBeInTheDocument();
+  });
+
+  it("counts executed trades per day and quotes the stored totals", async () => {
+    await renderDetail();
+    await openTab("Charts");
+    expect(screen.getByText("Executed buys")).toBeInTheDocument();
+    expect(screen.getByText("Executed sells")).toBeInTheDocument();
+    // 64 and 69 come from the stored trade_costs block, not from the two
+    // fixture rows, so the caption cannot drift from the metric tables.
+    expect(screen.getByText(/The stored result records/)).toBeInTheDocument();
+    expect(screen.getByText("64")).toBeInTheDocument();
+    expect(screen.getByText("69")).toBeInTheDocument();
+  });
+});
+
+describe("normalized performance", () => {
+  it("says plainly that the comparison chart is normalized", async () => {
+    await renderDetail();
+    await openTab("Charts");
+    expect(
+      chart(/Normalized performance \(each series rebased to 100\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Normalized for visual comparison only/)).toBeInTheDocument();
+  });
+
+  it("omits a series that started at zero instead of drawing a flat line", async () => {
+    await renderDetail({
+      result_metrics: {
+        ...METRICS,
+        benchmark1: {
+          points: [
+            { date: "2024-07-23", close: "0.639", cash: "0", shares: 0, equity: "0" },
+            { date: "2024-07-24", close: "0.641", cash: "0", shares: 0, equity: "0" },
+          ],
+          day_one_purchase: null,
+        },
+      },
+    });
+    await openTab("Charts");
+    expect(screen.getByText(/started at zero, so no ratio is defined/)).toBeInTheDocument();
+  });
+
+  it("names a benchmark that stored no points rather than estimating it", async () => {
+    await renderDetail({
+      result_metrics: { ...METRICS, benchmark2: { points: [], day_one_purchase: null } },
+    });
+    await openTab("Charts");
+    expect(screen.getByText(/Benchmark 2 stored no equity points/)).toBeInTheDocument();
+  });
+});
+
+describe("empty and failed chart states", () => {
+  it("shows an empty state for every chart when no series was stored", async () => {
+    await renderDetail({ daily_equity: [], trades: [], result_metrics: null });
+    await openTab("Charts");
+
+    // No chart may render a plot area without data behind it.
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    expect(screen.getByText(/no stored daily equity series/i)).toBeInTheDocument();
+    expect(screen.getByText(/no stored daily equity or benchmark series/i)).toBeInTheDocument();
+    expect(screen.getByText(/no stored drawdown series/i)).toBeInTheDocument();
+    expect(screen.getByText(/no stored series to normalize/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no stored daily price series to plot trades against/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/no executed trades on the daily axis/i)).toBeInTheDocument();
+  });
+
+  it("shows clean chart empty states for a FAILED run", async () => {
+    await renderDetail({
+      status: "FAILED",
+      result_metrics: null,
+      error_message: "Non-positive execution price.",
+      trades: [],
+      zone_events: [],
+      daily_equity: [],
+      event_equity: [],
+    });
+    await openTab("Charts");
+
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    // The failure is still reported, and no chart invents a figure.
+    expect(screen.getByText("This run did not complete")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("107771.70000000");
+  });
+
+  it("plots the price line when a run stored days but no trades", async () => {
+    await renderDetail({ trades: [] });
+    await openTab("Charts");
+    expect(chart(/Price with buy and sell trades/)).toBeInTheDocument();
+    expect(screen.getByText(/No executed trade could be placed/)).toBeInTheDocument();
+    // A day series with no trades is an activity chart with nothing to stack.
+    expect(screen.getByText(/no executed trades on the daily axis/i)).toBeInTheDocument();
   });
 });
 
