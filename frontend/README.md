@@ -305,21 +305,105 @@ status without inventing progress; nothing is polled.
 
 ### Charts
 
-Three SVG charts are drawn with local components — no charting dependency:
+The **Charts** tab draws seven SVG charts with local components — no charting
+dependency — grouped into three labelled sections.
 
-- **Equity** — `DailyEquity.equity` with both persisted benchmark point series
-  from `result_metrics.benchmark1/2.points[]`, on the same absolute axis. No
-  rebasing, normalization, or smoothing.
-- **Drawdown** — `DailyEquity.drawdown` read directly, with a zero reference
-  line and negatives preserved. Running peaks are never recalculated.
-- **Price and grid** — `DailyEquity.close` with the persisted baseline, A/C
-  boundaries, and only those grid levels actually stored. `price_bars` is never
-  requested and no level is synthesized; when none were stored the chart says so.
+**Price and trades**
 
-`lib/backtests/chart-data.ts` is the **only** module that converts a decimal
-string to a JavaScript number, and the result is used solely for SVG
-coordinates. Labels, tooltips, and every table cell keep the original strings.
-Empty, single-point, flat, and all-zero series all render safely.
+- **Price with buy and sell trades** — the daily close line from
+  `DailyEquity.close`, with a marker at every executed trade: an upward
+  triangle for each **BUY** and a downward triangle for each **SELL**, drawn at
+  the trade's persisted `execution_price` and positioned by looking its date up
+  on the daily axis. The persisted baseline and A/C zone boundaries are drawn as
+  dashed reference lines where `result_metrics` stores them. A trade is plotted
+  only when it actually executed at a price — a `SKIPPED` trade has no fill to
+  show — and whatever is left out is **counted in the caption** rather than
+  dropped silently. Trades sharing a date and a stored price collapse into one
+  glyph carrying the count, so a busy day stays legible.
+- **Price with baseline and grid geometry** — `DailyEquity.close` with the
+  persisted baseline, A/C boundaries, and only those grid levels actually
+  stored. No level is synthesized; when none were stored the chart says so.
+
+**Equity and performance**
+
+- **Strategy equity curve** — `DailyEquity.equity` on its own. The initial and
+  final figures quoted beneath are read from `result_metrics`, so the caption
+  cannot drift from the metric tables.
+- **Strategy against both benchmarks** — the same strategy series with both
+  persisted benchmark point series from `result_metrics.benchmark1/2.points[]`,
+  on one absolute equity axis. Nothing is rebased or smoothed here; a benchmark
+  that stored no points is named in the caption rather than estimated.
+- **Normalized performance** — the same three series, each rebased so its first
+  stored point equals **100**, with a reference line at 100. This is a
+  **chart-coordinate transformation only**: every point keeps the exact stored
+  string it came from, and **no stored metric is recomputed** — the reported
+  total and annualized returns in `result_metrics` remain the only figures the
+  dashboard quotes as results. Rebasing exists because the strategy and the two
+  benchmarks start from different capital, so their absolute curves cannot be
+  compared by eye. A series whose first point is zero has no defined ratio, so
+  it is omitted and named instead of drawn flat.
+
+**Risk and activity**
+
+- **Drawdown** — `DailyEquity.drawdown` read directly, with a **zero reference
+  line** and negatives preserved. Running peaks are never recalculated and
+  drawdown is never derived from the equity series, because either could
+  disagree with the stored maximum-drawdown metric.
+- **Trade activity per day** — executed buys and sells counted per date and
+  stacked, so bar height shows how busy a day was. Only whole rows are tallied,
+  never a price. The totals quoted beneath come from the stored
+  `result_metrics.metrics.trade_costs` block rather than being re-counted.
+
+#### Data and precision rules
+
+- **Persisted result data only.** Every series comes from the detail response —
+  the normalized `DailyEquity` and trade projections, and the stored
+  `result_metrics` document. **`price_bars` is never requested.**
+- **No financial metric is recomputed in the browser.** A second calculation
+  here could disagree with what the engine actually produced.
+- **Displayed values keep their exact `Decimal` strings.** Every chart caption
+  and every table cell shows what the backend stored, unrounded and
+  unreformatted — the deepest drawdown, the initial and final equity, and the
+  stored buy/sell counts are all quoted verbatim. The only formatted numbers are
+  the axis tick labels, which are derived plot coordinates rather than reported
+  figures, so a compact rendering there cannot misstate a stored value.
+- `lib/backtests/chart-data.ts` is the **only** module that converts a decimal
+  string to a JavaScript number, and it does so solely at the **final SVG
+  coordinate boundary**. A pixel is far coarser than the precision lost, so
+  plotting through float is safe; the same conversion in a label would silently
+  corrupt a reported value.
+- **Dependency-free SVG.** The charts are local components — there is no
+  charting library, and `tests/architecture.test.ts` asserts none is added.
+
+#### Reading the charts without colour
+
+- **BUY and SELL are told apart by marker direction and legend label**, not by
+  colour: buys point up, sells point down, and each legend key draws the same
+  triangle the chart uses.
+- Lines carry distinct **dash patterns** as well as colours, and the legend
+  swatch reproduces the pattern.
+- Activity bars distinguish sells from buys by a **hatch texture**.
+- Each chart is exposed as `img` with a `<title>` and a `<desc>`, sits in a
+  labelled section, and names the table holding its exact values.
+- **The result tables remain the exact textual alternative** to every chart —
+  the same stored strings, in full, reachable by keyboard.
+
+#### Empty, minimal, and failed runs
+
+A run with no stored series never renders a broken axis. Each chart falls back
+to its **own empty-state card** naming exactly what was missing — no stored
+daily equity, no stored drawdown series, no series to normalize, no executed
+trades on the daily axis. A **FAILED** run shows its persisted `error_message`
+above those cards and fabricates nothing. Single-point, flat, and all-zero
+series all render safely: a lone point is drawn as a dot rather than an
+invisible zero-length line.
+
+#### Responsiveness
+
+Every chart is a `viewBox` SVG that scales to its container, so the set is
+readable at phone width; anything genuinely too wide scrolls inside its own
+container rather than pushing the document sideways. Verified at 390×844,
+768×1024, and 1440×900.
 
 ### Rename, delete, rerun, duplicate, compare
 
@@ -383,8 +467,10 @@ detail request has confirmed the run loaded.
 - Dialogs are `aria-modal`, labelled by their heading, dismissed with `Escape`,
   and return focus to the control that opened them.
 - Result tabs follow the ARIA tabs pattern, including `Arrow`/`Home`/`End`.
-- Charts are exposed as `img` with a `<title>` and a `<desc>`, and every figure
-  they show is also available as text in the result tables.
+- Charts are exposed as `img` with a `<title>` and a `<desc>`, grouped under
+  labelled sections, and every figure they show is also available as text in the
+  result tables. Series and trade sides are distinguished by marker direction,
+  dash pattern, and hatching as well as colour.
 - State is never conveyed by colour alone — the current nav item, run statuses,
   and validation errors all say so in text. Errors are announced through live
   regions.
@@ -446,6 +532,8 @@ frontend/
     auth/                 login/register forms, logout button, route guards
     layout/               app header and navigation
     ui/                   button, input, form field, alert, loading state
+    charts/               dependency-free SVG line/bar charts and the
+                          per-chart wrappers the dashboard composes
     results/              result dashboard, tabs, tables, export controls
     history/              history list, filters, run actions, comparison
   lib/

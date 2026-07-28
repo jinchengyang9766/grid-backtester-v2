@@ -53,9 +53,9 @@ grid-backtester-v2/
   typed API client. Implemented pages: `/` (public landing), `/login`,
   `/register`, `/history` (the authenticated landing — searchable, filterable,
   paginated backtest history), `/history/{id}` (the full persisted-result
-  dashboard with metrics, configuration, dependency-free SVG equity/drawdown/
-  price charts, and all four result tables), `/history/compare` (side-by-side
-  stored metrics), `/datasets` (list, detail, delete), and `/backtest/new`,
+  dashboard with metrics, configuration, a dependency-free SVG chart tab, and
+  all four result tables), `/history/compare` (side-by-side stored metrics),
+  `/datasets` (list, detail, delete), and `/backtest/new`,
   which runs the full SPEC Section 28 wizard from upload through strategy
   configuration to execution. Runs can be renamed, rerun, duplicated with
   edited settings, deleted, and compared, and all four exports download through
@@ -63,6 +63,18 @@ grid-backtester-v2/
   without JavaScript touching the bytes. Financial values are handled as exact
   decimal strings and converted to numbers only at the SVG-coordinate boundary;
   uploaded files and preview tokens stay in memory only.
+- **Result dashboard charts: complete.** The Charts tab groups seven
+  dependency-free SVG charts: daily close with **executed BUY/SELL trade
+  markers** (plus the persisted baseline and A/C boundaries), the price-and-grid
+  chart, the **strategy equity curve**, a **benchmark comparison** against both
+  stored buy-and-hold series, a **normalized performance** view rebasing each
+  available series to 100, the **drawdown** curve with a zero reference line,
+  and **daily trade activity** counted by date. Every series is read from
+  persisted result data — `price_bars` is never requested, no metric is
+  recomputed in the browser, and rebasing is a chart-coordinate transform that
+  leaves the stored decimal strings untouched. Buy and sell are distinguished by
+  marker direction and legend label rather than colour alone, and FAILED or
+  empty runs render per-chart empty states instead of broken axes.
 - **End-to-end verified.** A Playwright (Chromium) suite drives the real
   application against a real backend — registration, sign-in, the full dataset
   wizard, strategy configuration and execution, history, the result dashboard,
